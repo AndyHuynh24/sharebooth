@@ -3,53 +3,240 @@
 <head>
   <meta charset="utf-8" />
   <title>Sharebooth</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <img src="logo.svg" alt="Mochi" width="64" height="64">
-      <div>
+
+  <!-- ========== LANDING SCREEN ========== -->
+  <div id="screenLanding" class="screen screen-landing">
+    <div class="landing-container">
+      <div class="landing-logo">
+        <img src="logo.svg" alt="Sharebooth" width="72" height="72">
         <h1>Sharebooth</h1>
-        <div class="note">Make one tiny group photo. Press create → share code with friends → snap. No apps.</div>
+        <p class="landing-tagline">Snap photos with friends. No app needed.</p>
+      </div>
+      <div class="landing-actions">
+        <input id="name" class="name-input" placeholder="Your name" maxlength="20" />
+        <button id="btnCreate" class="btn btn-primary btn-lg">Create Session</button>
+        <div class="landing-divider"><span>or</span></div>
+        <div class="join-row">
+          <input id="joinCode" class="code-input" placeholder="Code" maxlength="4" inputmode="numeric" />
+          <button id="btnJoin" class="btn btn-secondary btn-lg" style="width:auto">Join</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== SESSION SCREEN ========== -->
+  <div id="screenSession" class="screen screen-session" style="display:none">
+
+    <!-- Top bar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <img src="logo.svg" alt="" width="32" height="32">
+        <span class="topbar-title">Sharebooth</span>
+      </div>
+      <div class="topbar-right">
+        <span class="session-code" id="sessionCodeDisplay">----</span>
+        <button id="btnCopyCode" class="btn btn-icon" title="Copy code">&#128203;</button>
+        <span class="participant-count" id="participantCount">0</span>
       </div>
     </header>
 
-    <div class="card" style="margin-top:12px">
-      <div>
-        <button id="btnCreate" class="primary">Create Cuddle</button>
-        <button id="btnJoin" class="secondary">Join with Code</button>
-        <span id="sessionInfo" style="margin-left:12px"></span>
+    <!-- Two-column layout for landscape -->
+    <div class="session-columns">
+
+      <!-- LEFT COLUMN: camera + controls -->
+      <div class="session-col-left">
+
+        <!-- Prompt area -->
+        <section class="prompt-section">
+          <div class="prompt-categories">
+            <button class="prompt-cat active" data-cat="mix">Mix</button>
+            <button class="prompt-cat" data-cat="funny">Funny</button>
+            <button class="prompt-cat" data-cat="silly">Silly</button>
+            <button class="prompt-cat" data-cat="chill">Chill</button>
+            <button class="prompt-cat" data-cat="hype">Hype</button>
+            <button class="prompt-cat" data-cat="love">Love</button>
+          </div>
+          <button id="btnRandomPrompt" class="btn btn-accent">Random Prompt</button>
+          <div id="promptDisplay" class="prompt-display"></div>
+          <div id="promptCountdown" class="prompt-countdown" style="display:none"></div>
+        </section>
+
+        <!-- Camera section -->
+        <section class="camera-section">
+          <div class="camera-wrapper">
+            <video id="video" autoplay playsinline muted></video>
+            <canvas id="livePreview" style="display:none"></canvas>
+            <div id="bgProcessing" class="processing-overlay" style="display:none">
+              <span>Removing background...</span>
+            </div>
+          </div>
+          <div class="camera-controls">
+            <label class="toggle-label">
+              <input type="checkbox" id="bgRemoveToggle" />
+              <span>Remove BG</span>
+            </label>
+            <div id="bgPresets" class="bg-presets" style="display:none">
+              <button class="bg-dot active" data-bg="#FFF6EB" style="background:#FFF6EB" title="Cream"></button>
+              <button class="bg-dot" data-bg="#C8FFE1" style="background:#C8FFE1" title="Mint"></button>
+              <button class="bg-dot" data-bg="#A0D8FF" style="background:#A0D8FF" title="Blue"></button>
+              <button class="bg-dot" data-bg="#FFB6C1" style="background:#FFB6C1" title="Pink"></button>
+              <button class="bg-dot" data-bg="transparent" title="None">&#10005;</button>
+            </div>
+          </div>
+          <!-- Virtual background presets (shown when BG removal is on) -->
+          <div id="virtualBgSection" class="virtual-bg-section" style="display:none">
+            <span class="virtual-bg-label">Virtual BG:</span>
+            <div class="virtual-bg-presets">
+              <button class="vbg-opt active" data-vbg="color:#FFF6EB" style="background:#FFF6EB" title="Cream"></button>
+              <button class="vbg-opt" data-vbg="color:#C8FFE1" style="background:#C8FFE1" title="Mint"></button>
+              <button class="vbg-opt" data-vbg="color:#A0D8FF" style="background:#A0D8FF" title="Blue"></button>
+              <button class="vbg-opt" data-vbg="color:#FFB6C1" style="background:#FFB6C1" title="Pink"></button>
+              <button class="vbg-opt" data-vbg="color:#222222" style="background:#222" title="Dark"></button>
+              <button class="vbg-opt" data-vbg="none" title="Off">&#10005;</button>
+              <input type="file" id="vbgUpload" accept="image/*" style="display:none" />
+              <button class="vbg-opt vbg-upload-btn" title="Upload image">+</button>
+            </div>
+            <div id="vbgPhotos" class="vbg-photos"></div>
+          </div>
+        </section>
+
+        <!-- SNAP + Stop camera buttons -->
+        <div class="snap-section">
+          <button id="btnStopCamera" class="btn btn-icon camera-stop-btn" title="Stop camera">&#9724;</button>
+          <button id="snap" class="btn-snap" aria-label="Take photo">
+            <span class="snap-inner"></span>
+          </button>
+        </div>
+
       </div>
 
-      <div id="controls" style="margin-top:12px;display:none">
-        <div style="display:flex;gap:8px;align-items:center">
-          <video id="video" autoplay playsinline style="width:220px;height:160px;border-radius:12px;background:#ddd"></video>
-          <div style="display:flex;flex-direction:column">
-            <button id="snap" class="primary" style="margin-bottom:8px">SNAP ❤️</button>
-            <input id="name" placeholder="Your name (optional)" />
-            <label style="margin-top:8px"><input type="checkbox" id="recordToggle" checked> Auto-record final 3s</label>
+      <!-- RIGHT COLUMN: frame + canvas + tools -->
+      <div class="session-col-right">
+
+        <!-- Layout picker -->
+        <section id="layoutPicker" class="layout-section">
+          <span class="layout-label">Layout:</span>
+          <div class="layout-options">
+            <button class="layout-opt" data-layout="2x2" title="2x2 Grid">
+              <svg viewBox="0 0 24 24" width="28" height="28"><rect x="1" y="1" width="10" height="10" rx="2" fill="currentColor"/><rect x="13" y="1" width="10" height="10" rx="2" fill="currentColor"/><rect x="1" y="13" width="10" height="10" rx="2" fill="currentColor"/><rect x="13" y="13" width="10" height="10" rx="2" fill="currentColor"/></svg>
+            </button>
+            <button class="layout-opt" data-layout="3x3" title="3x3 Grid">
+              <svg viewBox="0 0 24 24" width="28" height="28"><rect x="1" y="1" width="6" height="6" rx="1" fill="currentColor"/><rect x="9" y="1" width="6" height="6" rx="1" fill="currentColor"/><rect x="17" y="1" width="6" height="6" rx="1" fill="currentColor"/><rect x="1" y="9" width="6" height="6" rx="1" fill="currentColor"/><rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor"/><rect x="17" y="9" width="6" height="6" rx="1" fill="currentColor"/><rect x="1" y="17" width="6" height="6" rx="1" fill="currentColor"/><rect x="9" y="17" width="6" height="6" rx="1" fill="currentColor"/><rect x="17" y="17" width="6" height="6" rx="1" fill="currentColor"/></svg>
+            </button>
+            <button class="layout-opt" data-layout="4x4" title="4x4 Grid">
+              <svg viewBox="0 0 24 24" width="28" height="28"><rect x="1" y="1" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="7" y="1" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="13" y="1" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="19" y="1" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="1" y="7" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="7" y="7" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="13" y="7" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="19" y="7" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="1" y="13" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="7" y="13" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="13" y="13" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="19" y="13" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="1" y="19" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="7" y="19" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="13" y="19" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="19" y="19" width="4.5" height="4.5" rx="1" fill="currentColor"/></svg>
+            </button>
+            <button class="layout-opt" data-layout="1big3" title="1 Big + 3 Small">
+              <svg viewBox="0 0 24 24" width="28" height="28"><rect x="1" y="1" width="14" height="22" rx="2" fill="currentColor"/><rect x="17" y="1" width="6" height="6" rx="1" fill="currentColor"/><rect x="17" y="9" width="6" height="6" rx="1" fill="currentColor"/><rect x="17" y="17" width="6" height="6" rx="1" fill="currentColor"/></svg>
+            </button>
+            <button class="layout-opt" data-layout="strip" title="Photo Strip">
+              <svg viewBox="0 0 24 24" width="28" height="28"><rect x="6" y="1" width="12" height="4.5" rx="1" fill="currentColor"/><rect x="6" y="7" width="12" height="4.5" rx="1" fill="currentColor"/><rect x="6" y="13" width="12" height="4.5" rx="1" fill="currentColor"/><rect x="6" y="19" width="12" height="4.5" rx="1" fill="currentColor"/></svg>
+            </button>
+            <button class="layout-opt active" data-layout="freeform" title="Freeform">
+              <svg viewBox="0 0 24 24" width="28" height="28"><rect x="2" y="3" width="8" height="7" rx="1" fill="currentColor" transform="rotate(-5 6 6.5)"/><rect x="12" y="1" width="9" height="7" rx="1" fill="currentColor" transform="rotate(3 16.5 4.5)"/><rect x="4" y="14" width="8" height="7" rx="1" fill="currentColor" transform="rotate(4 8 17.5)"/><rect x="14" y="13" width="8" height="7" rx="1" fill="currentColor" transform="rotate(-3 18 16.5)"/></svg>
+            </button>
           </div>
-          <div style="flex:1">
-            <div id="preview" class="card">
-              <canvas id="canvas"></canvas>
-            </div>
-            <div class="row" id="thumbs"></div>
-            <div class="note">When others snap, their Polaroid will drop in and Mochi critters will play.</div>
+        </section>
+
+        <!-- Frame shape controls -->
+        <section class="frame-shape-section">
+          <span class="frame-shape-label">Frame:</span>
+          <div class="frame-shape-options">
+            <button class="fshape-opt active" data-shape="rect" title="Re
+            ctangle">&#9724;</button>
+            <button class="fshape-opt" data-shape="rounded" title="Rounded">&#9646;</button>
+            <button class="fshape-opt" data-shape="circle" title="Circle">&#9679;</button>
+            <button class="fshape-opt" data-shape="heart" title="Heart">&#10084;</button>
+            <button class="fshape-opt" data-shape="star" title="Star">&#9733;</button>
           </div>
-        </div>
-        <div style="margin-top:12px">
-          <button id="finish" class="secondary">Finish & Export</button>
-          <span id="shareArea"></span>
-        </div>
+          <label class="frame-slider-label">
+            Border
+            <input type="range" id="frameBorderWidth" min="0" max="20" value="6" class="frame-slider" />
+          </label>
+          <label class="frame-slider-label">
+            Radius
+            <input type="range" id="frameBorderRadius" min="0" max="50" value="4" class="frame-slider" />
+          </label>
+          <label class="frame-slider-label">
+            Color
+            <input type="color" id="frameBorderColorPicker" value="#ffffff" class="fbg-color-picker" />
+          </label>
+        </section>
+
+        <!-- Frame background picker -->
+        <section class="frame-bg-section">
+          <span class="frame-bg-label">Background:</span>
+          <div class="frame-bg-options">
+            <button class="fbg-opt active" data-fbg="color:#FFF6EB" style="background:#FFF6EB" title="Cream"></button>
+            <button class="fbg-opt" data-fbg="color:#FFFFFF" style="background:#FFF;border:1px solid #ddd" title="White"></button>
+            <button class="fbg-opt" data-fbg="color:#FFB6C1" style="background:#FFB6C1" title="Pink"></button>
+            <button class="fbg-opt" data-fbg="color:#C8FFE1" style="background:#C8FFE1" title="Mint"></button>
+            <button class="fbg-opt" data-fbg="color:#A0D8FF" style="background:#A0D8FF" title="Blue"></button>
+            <button class="fbg-opt" data-fbg="color:#222222" style="background:#222" title="Dark"></button>
+            <input type="color" id="fbgColorPicker" class="fbg-color-picker" value="#FFF6EB" title="Custom color" />
+            <input type="file" id="fbgImageUpload" accept="image/*" style="display:none" />
+            <button class="fbg-opt fbg-upload-btn" title="Upload background image">&#128247;</button>
+          </div>
+        </section>
+
+        <!-- Canvas preview -->
+        <section class="canvas-section">
+          <div id="preview" class="canvas-preview">
+            <canvas id="canvas"></canvas>
+            <canvas id="decoCanvas"></canvas>
+          </div>
+        </section>
+
+        <!-- Decoration toolbar -->
+        <section class="deco-toolbar" id="decoToolbar">
+          <div class="deco-tools">
+            <button class="deco-tool active" data-tool="none" title="Select / Move">&#9995;</button>
+            <button class="deco-tool" data-tool="sticker" title="Place sticker">&#11088;</button>
+            <button class="deco-tool" data-tool="text" title="Add text">Aa</button>
+            <button class="deco-tool deco-delete" data-tool="delete" title="Delete selected">&#128465;</button>
+          </div>
+          <div id="emojiPicker" class="emoji-picker" style="display:none">
+            <span class="emoji-opt active">&#10084;&#65039;</span>
+            <span class="emoji-opt">&#11088;</span>
+            <span class="emoji-opt">&#128293;</span>
+            <span class="emoji-opt">&#128514;</span>
+            <span class="emoji-opt">&#10024;</span>
+            <span class="emoji-opt">&#128077;</span>
+            <span class="emoji-opt">&#128081;</span>
+            <span class="emoji-opt">&#127752;</span>
+            <span class="emoji-opt">&#127881;</span>
+            <span class="emoji-opt">&#129395;</span>
+            <span class="emoji-opt">&#128150;</span>
+            <span class="emoji-opt">&#127775;</span>
+          </div>
+        </section>
+
+        <!-- Thumbnails -->
+        <section class="thumbs-section">
+          <div id="thumbs" class="thumbs-row"></div>
+        </section>
+
+        <!-- Export bar -->
+        <section class="export-section">
+          <button id="exportPng" class="btn btn-secondary">Export PNG</button>
+          <button id="exportGif" class="btn btn-secondary">Export GIF</button>
+          <span id="gifProgress" class="gif-progress" style="display:none"></span>
+          <button id="finish" class="btn btn-primary">Finish Session</button>
+          <div id="shareArea" class="share-area"></div>
+        </section>
+
       </div>
     </div>
 
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="prompts.js"></script>
   <script src="client.js"></script>
 </body>
 </html>
