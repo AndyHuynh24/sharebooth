@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Sharebooth</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <img src="logo.svg" alt="Mochi" width="64" height="64">
+      <div>
+        <h1>Sharebooth</h1>
+        <div class="note">Make one tiny group photo. Press create → share code with friends → snap. No apps.</div>
+      </div>
+    </header>
+
+    <div class="card" style="margin-top:12px">
+      <div>
+        <button id="btnCreate" class="primary">Create Cuddle</button>
+        <button id="btnJoin" class="secondary">Join with Code</button>
+        <span id="sessionInfo" style="margin-left:12px"></span>
+      </div>
+
+      <div id="controls" style="margin-top:12px;display:none">
+        <div style="display:flex;gap:8px;align-items:center">
+          <video id="video" autoplay playsinline style="width:220px;height:160px;border-radius:12px;background:#ddd"></video>
+          <div style="display:flex;flex-direction:column">
+            <button id="snap" class="primary" style="margin-bottom:8px">SNAP ❤️</button>
+            <input id="name" placeholder="Your name (optional)" />
+            <label style="margin-top:8px"><input type="checkbox" id="recordToggle" checked> Auto-record final 3s</label>
+          </div>
+          <div style="flex:1">
+            <div id="preview" class="card">
+              <canvas id="canvas"></canvas>
+            </div>
+            <div class="row" id="thumbs"></div>
+            <div class="note">When others snap, their Polaroid will drop in and Mochi critters will play.</div>
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <button id="finish" class="secondary">Finish & Export</button>
+          <span id="shareArea"></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="client.js"></script>
+</body>
+</html>

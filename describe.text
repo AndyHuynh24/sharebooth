@@ -1,0 +1,44 @@
+sharebooth/
+├─ server.js            # backend (Express + socket.io + upload)
+├─ package.json
+├─ public/
+│  ├─ index.html        # UI shell
+│  ├─ style.css         # tất cả CSS (visual)
+│  ├─ client.js         # client logic: camera, upload, canvas, socket
+│  ├─ logo.svg
+│  └─ uploads/          # nơi lưu ảnh khi upload
+└─ uploads/              # (server tạo khi upload)
+
+server.js
+
+    Tạo sessions, xử lý socket events (join, snapped, finish), lưu upload (multer).
+
+    Chỗ hay sửa: khi broadcast snapped — dùng socket.to(code).emit(...) để không gửi lại cho sender (đã fix hiện đang đôi ảnh do sender tự thêm + server broadcast).
+
+    Uploads lưu dưới /uploads và được serve ở /uploads/<file>.
+
+public/client.js (key)
+
+Các hàm/chức năng chính:
+
+    startCamera() — lấy camera.
+
+    doSnap() → uploadAndEmitFromCanvas() — chụp, upload, tạo layer tạm (pending) rồi emit snapped.
+
+    uploadBlob() — gọi /api/upload.
+
+    addLocalLayer(...), confirmLayerFromServer(...) — quản lý layers[] (pending vs confirmed).
+
+    render(time) — vẽ canvas (polaroid + critter + animation).
+
+    exportCanvasPNG() — xuất ảnh tĩnh khi Finish.
+
+    Socket handlers: socket.on('snapped', ...), socket.on('user-joined', ...), socket.on('finish', ...).
+
+    Nếu muốn thay UX: chỉnh render() và style.css.
+
+
+Cần sửa backend:
+- Khi người join sau vào sau khi người join trước đã chụp một hình thì render hình đó cho người sau xem luôn
+- Thêm function màu nền
+- Cái tên người collab chung nó đang bị lặp
