@@ -1,8 +1,4 @@
-# CuteCollage - Minimal Cutest Hack Demo
-
-This is a minimal demo implementation for the Cutest Hack "CuteCollage" idea.
-It's intentionally small and focused on the core experience: create a session, friends join with a 4-digit code, snap photos, and see cute critters appear.
-
+# Sharebooth
 ## Run locally
 
 1. Install Node dependencies:
