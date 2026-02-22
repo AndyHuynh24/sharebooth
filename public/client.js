@@ -228,22 +228,6 @@ function loadImage(src) {
     img.src = src;
   });
 }
-// Strict version that rejects on error (for upload/confirm flows)
-function loadImageStrict(src) {
-  return new Promise((resolve, reject) => {
-    if (!src) return reject(new Error('No src'));
-    if (imageCache.has(src)) {
-      const cached = imageCache.get(src);
-      if (cached instanceof HTMLImageElement) return resolve(cached);
-      return reject(new Error('Cached as fallback'));
-    }
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => { imageCache.set(src, img); resolve(img); };
-    img.onerror = () => reject(new Error('Failed to load ' + src));
-    img.src = src;
-  });
-}
 
 // ===== Canvas Sizing =====
 function resizeCanvasImmediate() {
@@ -382,33 +366,15 @@ function confirmLayerFromServer(serverLayer) {
     renderVbgPhotos();
     render();
   } else {
-    // Add as pending first, then preload image before confirming
-    const photo = addToPhotoBank({
+    // Add and confirm immediately — loadImage handles fallback gracefully
+    addToPhotoBank({
       id: serverLayer.id, imageUrl: serverLayer.imageUrl,
-      owner: serverLayer.owner, ts: serverLayer.timestamp, state: 'pending'
+      owner: serverLayer.owner, ts: serverLayer.timestamp, state: 'confirmed'
     });
-    loadImageStrict(serverLayer.imageUrl).then(() => {
-      const p = findPhotoByImageUrl(serverLayer.imageUrl);
-      if (p) { p.state = 'confirmed'; p.dropProgress = 1; }
+    loadImage(serverLayer.imageUrl).then(() => {
       renderPhotoBank();
       renderVbgPhotos();
       render();
-    }).catch(() => {
-      // Image failed to load — retry once after 2s
-      setTimeout(() => {
-        loadImageStrict(serverLayer.imageUrl).then(() => {
-          const p = findPhotoByImageUrl(serverLayer.imageUrl);
-          if (p) { p.state = 'confirmed'; p.dropProgress = 1; }
-          renderPhotoBank();
-          renderVbgPhotos();
-          render();
-        }).catch(() => {
-          // Give up — remove the broken photo
-          const idx = photoBank.findIndex(x => x.imageUrl === serverLayer.imageUrl);
-          if (idx >= 0) photoBank.splice(idx, 1);
-          renderPhotoBank();
-        });
-      }, 2000);
     });
   }
 }
@@ -681,6 +647,7 @@ function setSnapProcessing(processing) {
 
 async function doSnap() {
   if (isProcessingSnap) return;
+  if (getTotalPhotoCount() >= MAX_PHOTOS) return;
 
   let tmpCanvas;
   if (video && video.readyState >= 2) {
@@ -709,18 +676,19 @@ async function doSnap() {
 async function uploadAndEmit(processedCanvas) {
   return new Promise((resolve, reject) => {
     processedCanvas.toBlob(async (blob) => {
+      let tempId = null;
       try {
-        const tempId = generateId();
+        tempId = generateId();
         const localUrl = URL.createObjectURL(blob);
         addToPhotoBank({ imageUrl: localUrl, owner: getMyName(), tempId, state: 'pending' });
 
         const j = await uploadBlob(blob);
         const imageUrl = j.url;
-        // Preload server URL into cache before swapping
-        await loadImageStrict(imageUrl);
+
+        // Swap blob URL to server URL directly (trust the upload — don't pre-verify)
         const localPhoto = findPhotoByTempId(tempId);
         if (localPhoto) {
-          URL.revokeObjectURL(localPhoto.imageUrl); // free blob memory
+          URL.revokeObjectURL(localPhoto.imageUrl);
           localPhoto.imageUrl = imageUrl;
           localPhoto.tempId = null;
           localPhoto.state = 'confirmed';
@@ -729,28 +697,26 @@ async function uploadAndEmit(processedCanvas) {
           addToPhotoBank({ imageUrl, owner: getMyName(), state: 'confirmed' });
         }
 
-        // Re-render immediately so DOM picks up the new server URL
         renderPhotoBank();
         renderVbgPhotos();
         render();
 
         socket.emit('snapped', { code: sessionCode, imageUrl, name: getMyName() });
-
         resolve();
       } catch (err) {
         console.error('upload error', err);
-        // Remove the failed pending photo from bank
-        const failedIdx = photoBank.findIndex(p => p.tempId === tempId);
-        if (failedIdx >= 0) {
-          URL.revokeObjectURL(photoBank[failedIdx].imageUrl);
-          photoBank.splice(failedIdx, 1);
-        }
-        // Also check layers
-        for (let li = 0; li < layers.length; li++) {
-          if (layers[li] && layers[li].tempId === tempId) {
-            URL.revokeObjectURL(layers[li].imageUrl);
-            layers[li] = null;
-            break;
+        if (tempId) {
+          const failedIdx = photoBank.findIndex(p => p.tempId === tempId);
+          if (failedIdx >= 0) {
+            URL.revokeObjectURL(photoBank[failedIdx].imageUrl);
+            photoBank.splice(failedIdx, 1);
+          }
+          for (let li = 0; li < layers.length; li++) {
+            if (layers[li] && layers[li].tempId === tempId) {
+              URL.revokeObjectURL(layers[li].imageUrl);
+              layers[li] = null;
+              break;
+            }
           }
         }
         renderPhotoBank();
