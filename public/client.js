@@ -2383,12 +2383,24 @@ let sessionPassword = null;
 let hasJoinedSession = false; // true after first successful user-joined
 
 // ===== Socket Events =====
+
+// Helper: emit join only when socket is connected
+function emitJoin() {
+  if (!sessionCode) return;
+  const payload = { code: sessionCode, name: getMyName() || 'Guest', password: sessionPassword || '' };
+  if (socket.connected) {
+    socket.emit('join', payload);
+  } else {
+    socket.once('connect', () => socket.emit('join', payload));
+  }
+}
+
 socket.on('connect', () => {
   console.log('connected', socket.id);
-  // Auto-rejoin session after reconnect
-  if (sessionCode) {
+  // Auto-rejoin session after reconnect (only if we previously joined successfully)
+  if (sessionCode && hasJoinedSession) {
     console.log('Rejoining session', sessionCode);
-    socket.emit('join', { code: sessionCode, name: getMyName() || 'Guest', password: sessionPassword || '' });
+    emitJoin();
   }
 });
 
@@ -2576,7 +2588,8 @@ document.getElementById('btnJoin').onclick = async () => {
   syncSessionDisplay(sessionCode, '0');
   showSession();
   // Join the socket room immediately — don't wait for camera
-  socket.emit('join', { code: sessionCode, name: getMyName() || 'Guest', password: password });
+  hasJoinedSession = false;
+  emitJoin();
   startCamera();
 };
 
@@ -2655,7 +2668,8 @@ document.getElementById('wizardNext').onclick = async () => {
   syncSessionDisplay(sessionCode, '0');
   showSession();
   // Join the socket room immediately — don't wait for camera
-  socket.emit('join', { code: sessionCode, name: getMyName() || 'Host', password: wizardPassword });
+  hasJoinedSession = false;
+  emitJoin();
   startCamera();
 
   // Update layout & ratio UI in session screen
@@ -3427,5 +3441,7 @@ window.addEventListener('popstate', () => {
     document.getElementById('screenWizard').style.display = 'none';
     document.getElementById('screenLanding').style.display = 'flex';
     sessionCode = null;
+    sessionPassword = null;
+    hasJoinedSession = false;
   }
 });
