@@ -219,7 +219,12 @@ io.on('connection', socket => {
 
   socket.on('disconnect', () => {
     for (const c in sessions) {
+      const before = sessions[c].participants.length;
       sessions[c].participants = sessions[c].participants.filter(p => p.id !== socket.id);
+      if (sessions[c].participants.length < before) {
+        // Notify remaining participants about the updated count
+        io.to(c).emit('user-left', { participants: sessions[c].participants });
+      }
       if (sessions[c].participants.length === 0) {
         if (cleanupTimers[c]) clearTimeout(cleanupTimers[c]);
         const code = c;
