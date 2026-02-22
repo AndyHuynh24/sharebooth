@@ -1547,7 +1547,12 @@ html, body {
 }
 
 
-.thumb-pending { opacity: 0.5; }
+.thumb-pending {
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: default;
+  animation: processingPulse 1.5s ease infinite;
+}
 
 .bank-photo { border: 2px solid var(--mint); }
 .thumb-assigned { border: 2px solid var(--brown); }

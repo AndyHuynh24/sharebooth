@@ -364,16 +364,23 @@ function confirmLayerFromServer(serverLayer) {
     existing.ts = serverLayer.timestamp || existing.ts;
     existing.state = 'confirmed';
     if (existing.dropProgress === 0) existing.dropProgress = 1;
+    renderPhotoBank();
+    renderVbgPhotos();
+    render();
   } else {
-    addToPhotoBank({
+    // Add as pending first, then preload image before confirming
+    const photo = addToPhotoBank({
       id: serverLayer.id, imageUrl: serverLayer.imageUrl,
-      owner: serverLayer.owner, ts: serverLayer.timestamp, state: 'confirmed'
+      owner: serverLayer.owner, ts: serverLayer.timestamp, state: 'pending'
     });
-    return;
+    loadImage(serverLayer.imageUrl).then(() => {
+      const p = findPhotoByImageUrl(serverLayer.imageUrl);
+      if (p) { p.state = 'confirmed'; }
+      renderPhotoBank();
+      renderVbgPhotos();
+      render();
+    });
   }
-  renderPhotoBank();
-  renderVbgPhotos();
-  render();
 }
 
 // ===== Photo Bank (below canvas) =====
@@ -387,25 +394,28 @@ function renderPhotoBank() {
   for (let i = 0; i < slotCount; i++) {
     const l = layers[i];
     if (!l) continue;
+    const isLayerPending = l.state === 'pending';
     const wrapper = document.createElement('div');
-    wrapper.className = 'thumb-wrapper thumb-assigned';
-    wrapper.draggable = true;
+    wrapper.className = 'thumb-wrapper thumb-assigned' + (isLayerPending ? ' thumb-pending' : '');
+    wrapper.draggable = !isLayerPending;
     wrapper.dataset.slotIndex = i;
 
-    wrapper.addEventListener('dragstart', (e) => {
-      e.dataTransfer.setData('application/slot-index', String(i));
-      e.dataTransfer.effectAllowed = 'move';
-      wrapper.classList.add('thumb-dragging');
-    });
-    wrapper.addEventListener('dragend', () => {
-      wrapper.classList.remove('thumb-dragging');
-    });
+    if (!isLayerPending) {
+      wrapper.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('application/slot-index', String(i));
+        e.dataTransfer.effectAllowed = 'move';
+        wrapper.classList.add('thumb-dragging');
+      });
+      wrapper.addEventListener('dragend', () => {
+        wrapper.classList.remove('thumb-dragging');
+      });
+    }
 
     const img = document.createElement('img');
-    img.src = l.imageUrl;
     img.className = 'thumb-img';
     img.onerror = () => { img.style.background = '#ddd'; img.removeAttribute('src'); };
-    img.title = 'Slot ' + (i + 1) + ' — ' + (l.owner || '');
+    img.title = isLayerPending ? 'Loading...' : 'Slot ' + (i + 1) + ' — ' + (l.owner || '');
+    if (l.imageUrl) img.src = l.imageUrl;
     wrapper.appendChild(img);
 
     // Corner marker showing frame slot number
@@ -431,25 +441,29 @@ function renderPhotoBank() {
   // Bank photos below (new photos appear at bottom)
   for (let i = 0; i < photoBank.length; i++) {
     const p = photoBank[i];
+    const isPending = p.state === 'pending';
     const wrapper = document.createElement('div');
-    wrapper.className = 'thumb-wrapper bank-photo' + (p.state === 'pending' ? ' thumb-pending' : '');
-    wrapper.draggable = true;
+    wrapper.className = 'thumb-wrapper bank-photo' + (isPending ? ' thumb-pending' : '');
+    wrapper.draggable = !isPending;
     wrapper.dataset.bankIndex = i;
 
-    wrapper.addEventListener('dragstart', (e) => {
-      e.dataTransfer.setData('application/bank-index', String(i));
-      e.dataTransfer.effectAllowed = 'move';
-      wrapper.classList.add('thumb-dragging');
-    });
-    wrapper.addEventListener('dragend', () => {
-      wrapper.classList.remove('thumb-dragging');
-    });
+    if (!isPending) {
+      wrapper.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('application/bank-index', String(i));
+        e.dataTransfer.effectAllowed = 'move';
+        wrapper.classList.add('thumb-dragging');
+      });
+      wrapper.addEventListener('dragend', () => {
+        wrapper.classList.remove('thumb-dragging');
+      });
+    }
 
     const img = document.createElement('img');
-    img.src = p.imageUrl;
     img.className = 'thumb-img';
     img.onerror = () => { img.style.background = '#ddd'; img.removeAttribute('src'); };
-    img.title = (p.owner || '') + ' (drag to frame)';
+    img.title = isPending ? 'Loading...' : (p.owner || '') + ' (drag to frame)';
+    // Only set src once we know it's a valid URL (not a revoked blob)
+    if (p.imageUrl) img.src = p.imageUrl;
     wrapper.appendChild(img);
 
     // Delete button
@@ -647,8 +661,11 @@ async function uploadAndEmit(processedCanvas) {
 
         const j = await uploadBlob(blob);
         const imageUrl = j.url;
+        // Preload server URL into cache before swapping
+        await loadImage(imageUrl);
         const localPhoto = findPhotoByTempId(tempId);
         if (localPhoto) {
+          URL.revokeObjectURL(localPhoto.imageUrl); // free blob memory
           localPhoto.imageUrl = imageUrl;
           localPhoto.tempId = null;
         } else {
