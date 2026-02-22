@@ -1,7 +1,7 @@
 {
   "name": "sharebooth",
   "version": "1.0.0",
-  "description": "Sharebooth - Snap photos with friends, no app needed",
+  "description": "Sharebooth - A photobooth from anywhere",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
