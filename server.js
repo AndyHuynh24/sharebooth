@@ -26,6 +26,7 @@ app.use('/assets', express.static(ASSETS));
 
 // In-memory sessions
 const sessions = {};
+const cleanupTimers = {}; // code -> setTimeout id for delayed cleanup
 
 app.post('/api/create', (req, res) => {
   const code = Math.floor(1000 + Math.random() * 9000).toString();
@@ -86,6 +87,12 @@ io.on('connection', socket => {
       return;
     }
     socket.join(code);
+    // Cancel any pending cleanup timer since someone is joining
+    if (cleanupTimers[code]) {
+      clearTimeout(cleanupTimers[code]);
+      delete cleanupTimers[code];
+      console.log('Session', code, 'cleanup cancelled (participant rejoined)');
+    }
     const participant = { id: socket.id, name: name || 'Anon' };
     sessions[code].participants.push(participant);
     io.to(code).emit('user-joined', { participant, participants: sessions[code].participants });
@@ -225,18 +232,27 @@ io.on('connection', socket => {
   socket.on('disconnect', () => {
     for (const c in sessions) {
       sessions[c].participants = sessions[c].participants.filter(p => p.id !== socket.id);
-      // Clean up session and its uploaded files when last participant leaves
+      // Schedule cleanup after grace period when last participant leaves
       if (sessions[c].participants.length === 0) {
-        // Delete uploaded files referenced by this session
-        const urls = sessions[c].layers
-          .filter(l => l && l.imageUrl)
-          .map(l => l.imageUrl);
-        for (const url of urls) {
-          const filePath = path.join(__dirname, url);
-          fs.unlink(filePath, () => {}); // ignore errors
-        }
-        delete sessions[c];
-        console.log('Session', c, 'cleaned up (no participants)');
+        // Cancel any existing cleanup timer (in case someone left and came back before)
+        if (cleanupTimers[c]) clearTimeout(cleanupTimers[c]);
+        const code = c;
+        cleanupTimers[code] = setTimeout(() => {
+          // Re-check: only clean up if still no participants
+          if (sessions[code] && sessions[code].participants.length === 0) {
+            const urls = sessions[code].layers
+              .filter(l => l && l.imageUrl)
+              .map(l => l.imageUrl);
+            for (const url of urls) {
+              const filePath = path.join(__dirname, url);
+              fs.unlink(filePath, () => {});
+            }
+            delete sessions[code];
+            console.log('Session', code, 'cleaned up (no participants after grace period)');
+          }
+          delete cleanupTimers[code];
+        }, 60000); // 60 second grace period
+        console.log('Session', c, 'scheduled for cleanup in 60s');
       }
     }
   });

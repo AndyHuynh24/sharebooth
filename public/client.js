@@ -2,10 +2,8 @@
 
 const socket = io();
 
-// Ensure clean disconnect when closing/refreshing the page
-window.addEventListener('beforeunload', () => {
-  socket.disconnect();
-});
+// No beforeunload disconnect — let Socket.IO handle it naturally
+// with server-side grace period for reconnection
 
 // ===== State =====
 let sessionCode = null;
@@ -2408,8 +2406,18 @@ function showPromptFeedback() {
   }, 4000);
 }
 
+// Store password for auto-rejoin on reconnect
+let sessionPassword = null;
+
 // ===== Socket Events =====
-socket.on('connect', () => console.log('connected', socket.id));
+socket.on('connect', () => {
+  console.log('connected', socket.id);
+  // Auto-rejoin session after reconnect
+  if (sessionCode) {
+    console.log('Rejoining session', sessionCode);
+    socket.emit('join', { code: sessionCode, name: getMyName() || 'Guest', password: sessionPassword || '' });
+  }
+});
 
 socket.on('user-joined', ({ participant, participants: ps }) => {
   participants = ps || [];
@@ -2576,6 +2584,9 @@ document.getElementById('btnCreate').onclick = () => {
     alert('Please enter your name');
     return;
   }
+  // Clear join inputs so they don't interfere
+  document.getElementById('joinCode').value = '';
+  document.getElementById('joinPassword').value = '';
   wizardStep = 1;
   wizardAspectRatio = '4cut';
   wizardLayout = 'strip';
@@ -2589,6 +2600,7 @@ document.getElementById('btnJoin').onclick = async () => {
   if (!code || code.length !== 4) { alert('Enter a 4-digit code'); return; }
   const password = document.getElementById('joinPassword').value.trim();
   sessionCode = code;
+  sessionPassword = password;
   isHost = false;
   history.pushState(null, '', '/' + sessionCode);
   syncSessionDisplay(sessionCode, '0');
@@ -2667,6 +2679,7 @@ document.getElementById('wizardNext').onclick = async () => {
   currentLayout = wizardLayout;
   canvasRatioOverride = RATIO_MAP[wizardAspectRatio] !== undefined ? RATIO_MAP[wizardAspectRatio] : null;
 
+  sessionPassword = wizardPassword;
   history.pushState(null, '', '/' + sessionCode);
   syncSessionDisplay(sessionCode, '0');
   showSession();
@@ -2690,12 +2703,17 @@ document.getElementById('wizardBack').onclick = () => {
 
 // Handle join error (wrong password, invalid code)
 socket.on('join-error', ({ message }) => {
-  alert(message || 'Could not join session');
+  // Suppress rejoin errors silently (session expired after refresh)
+  if (!document.getElementById('screenSession').style.display || document.getElementById('screenSession').style.display === 'none') {
+    // Not in session screen — show alert
+    alert(message || 'Could not join session');
+  }
   document.getElementById('screenSession').style.display = 'none';
   document.getElementById('screenWizard').style.display = 'none';
   document.getElementById('screenLanding').style.display = 'flex';
   history.pushState(null, '', '/');
   sessionCode = null;
+  sessionPassword = null;
 });
 
 // Sync session display
