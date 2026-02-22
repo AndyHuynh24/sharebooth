@@ -14,7 +14,7 @@
     <div class="landing-container">
       <div class="landing-logo">
         <img src="/assets/logo/dark.png" alt="Sharebooth" class="landing-logo-img">
-        <p class="landing-tagline">Snap photos with friends. No app needed.</p>
+        <p class="landing-tagline">A photobooth - from anywhere.</p>
       </div>
       <div class="landing-actions">
         <input id="name" class="name-input" placeholder="Your name" maxlength="20" autocomplete="off" />
@@ -163,7 +163,10 @@
             <video id="video" autoplay playsinline muted></video>
             <canvas id="livePreview" style="display:none"></canvas>
             <div id="bgProcessing" class="processing-overlay" style="display:none">
-              <span>Removing background...</span>
+              <div class="processing-content">
+                <div class="processing-spinner"></div>
+                <span>Advanced background removal is processing, please wait...</span>
+              </div>
             </div>
           </div>
           <div class="camera-controls">

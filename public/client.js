@@ -616,7 +616,7 @@ function setSnapProcessing(processing) {
     snapBtn.disabled = true;
     snapBtn.style.opacity = '0.4';
     stopBtn.disabled = true;
-    overlay.querySelector('span').textContent = 'Enhancing your photo with advanced background removal\u2026 Please wait';
+    overlay.querySelector('span').textContent = 'Advanced background removal is processing, please wait\u2026';
     overlay.style.display = 'flex';
     if (segmentationLoop) { cancelAnimationFrame(segmentationLoop); segmentationLoop = null; }
   } else {
@@ -677,9 +677,9 @@ async function loadBgRemovalModule() {
   }
 }
 
-async function removeBackground(srcCanvas, showOverlay = true) {
+async function removeBackground(srcCanvas) {
   const blob = await new Promise(r => srcCanvas.toBlob(r, 'image/png'));
-  if (showOverlay) document.getElementById('bgProcessing').style.display = 'flex';
+  // Overlay is managed by setSnapProcessing — no need to toggle here
   try {
     const mod = await loadBgRemovalModule();
     if (!mod || !mod.removeBackground) throw new Error('BG removal module not available');
@@ -703,8 +703,6 @@ async function removeBackground(srcCanvas, showOverlay = true) {
   } catch (err) {
     console.error('BG removal failed:', err);
     return srcCanvas;
-  } finally {
-    if (showOverlay) document.getElementById('bgProcessing').style.display = 'none';
   }
 }
 
