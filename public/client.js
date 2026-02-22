@@ -532,7 +532,7 @@ function assignToSlot(bankIndex, slotIndex) {
   renderPhotoBank();
   render();
   updateSnapButton();
-  if (sessionCode) socket.emit('slot-assign', { code: sessionCode, slotIndex, photo: { id: photo.id, imageUrl: photo.imageUrl, owner: photo.owner } });
+  if (sessionCode) socket.emit('slot-assign', { code: sessionCode, slotIndex, photoId: photo.id });
 }
 
 function unassignFromSlot(slotIndex) {
@@ -659,8 +659,9 @@ async function doSnap() {
 // Convert canvas to data URL and emit directly via socket — no file upload needed
 function snapAndEmit(processedCanvas) {
   const dataUrl = processedCanvas.toDataURL('image/jpeg', 0.7);
-  addToPhotoBank({ imageUrl: dataUrl, owner: getMyName(), state: 'confirmed' });
-  socket.emit('snapped', { code: sessionCode, imageData: dataUrl, name: getMyName() });
+  const id = generateId();
+  addToPhotoBank({ id, imageUrl: dataUrl, owner: getMyName(), state: 'confirmed' });
+  socket.emit('snapped', { code: sessionCode, id, imageData: dataUrl, name: getMyName() });
 }
 
 // ===== Background Removal (dynamic import — ES module) =====
@@ -2054,7 +2055,7 @@ canvasPreview.addEventListener('drop', (e) => {
           renderPhotoBank();
           render();
           updateSnapButton();
-          if (sessionCode) socket.emit('slot-assign', { code: sessionCode, slotIndex: targetPhoto, photo: { id: newPhoto.id, imageUrl: newPhoto.imageUrl, owner: newPhoto.owner } });
+          if (sessionCode) socket.emit('slot-assign', { code: sessionCode, slotIndex: targetPhoto, photoId: newPhoto.id });
         }
       } else {
         // Freeform: append to end (dropped on empty space)
@@ -2067,7 +2068,7 @@ canvasPreview.addEventListener('drop', (e) => {
           renderPhotoBank();
           render();
           updateSnapButton();
-          if (sessionCode) socket.emit('slot-assign', { code: sessionCode, slotIndex: newIdx, photo: { id: photo.id, imageUrl: photo.imageUrl, owner: photo.owner } });
+          if (sessionCode) socket.emit('slot-assign', { code: sessionCode, slotIndex: newIdx, photoId: photo.id });
         }
       }
     } else {
@@ -2478,7 +2479,7 @@ socket.on('layout-sync', ({ layout }) => {
 
 // Photo edit sync from other users
 socket.on('photo-edit', ({ index, offsetX, offsetY, scale, shape, borderColor, cropX, cropY, cropScale, rotation }) => {
-  if (index < 0 || index >= layers.length) return;
+  if (index < 0 || index >= layers.length || !layers[index]) return;
   const l = layers[index];
   if (offsetX !== undefined) l.offsetX = offsetX;
   if (offsetY !== undefined) l.offsetY = offsetY;
@@ -2506,16 +2507,12 @@ socket.on('photo-swap', ({ fromIndex, toIndex }) => {
 });
 
 // Slot assign/unassign sync from other users
-socket.on('slot-assign', ({ slotIndex, photo }) => {
-  if (!photo) return;
-  // Remove from our bank if we have it
-  const bankIdx = photoBank.findIndex(p => p.imageUrl === photo.imageUrl);
-  let photoObj;
-  if (bankIdx >= 0) {
-    photoObj = photoBank.splice(bankIdx, 1)[0];
-  } else {
-    photoObj = createPhotoObj({ ...photo, state: 'confirmed' });
-  }
+socket.on('slot-assign', ({ slotIndex, photoId }) => {
+  if (!photoId) return;
+  // Find photo by ID in our local bank
+  const bankIdx = photoBank.findIndex(p => p.id === photoId);
+  if (bankIdx < 0) return; // photo not found locally — ignore
+  const photoObj = photoBank.splice(bankIdx, 1)[0];
   if (layers[slotIndex]) photoBank.push(layers[slotIndex]);
   photoObj.dropProgress = 0;
   photoObj.dropStartTs = null;

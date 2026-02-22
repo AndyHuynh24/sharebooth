@@ -103,9 +103,9 @@ io.on('connection', socket => {
   });
 
   // Photo snap — receives base64 data URL directly (no file upload needed)
-  socket.on('snapped', ({ code, imageData, name }) => {
+  socket.on('snapped', ({ code, id, imageData, name }) => {
     if (!sessions[code]) return;
-    const layer = { id: uuidv4(), owner: name || 'Anon', imageUrl: imageData, timestamp: Date.now() };
+    const layer = { id: id || uuidv4(), owner: name || 'Anon', imageUrl: imageData, timestamp: Date.now() };
     sessions[code].layers.push(layer);
     socket.to(code).emit('snapped', { layer });
   });
@@ -207,10 +207,10 @@ io.on('connection', socket => {
     socket.to(code).emit('photo-swap', { fromIndex, toIndex });
   });
 
-  // Slot assign/unassign
-  socket.on('slot-assign', ({ code, slotIndex, photo }) => {
+  // Slot assign/unassign (lightweight — only sends photo ID, not data)
+  socket.on('slot-assign', ({ code, slotIndex, photoId }) => {
     if (!sessions[code]) return;
-    socket.to(code).emit('slot-assign', { slotIndex, photo });
+    socket.to(code).emit('slot-assign', { slotIndex, photoId });
   });
   socket.on('slot-unassign', ({ code, slotIndex }) => {
     if (!sessions[code]) return;
