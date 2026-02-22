@@ -1548,9 +1548,27 @@ html, body {
 
 
 .thumb-pending {
-  opacity: 0.5;
   pointer-events: none;
   cursor: default;
+  position: relative;
+}
+.thumb-pending .thumb-img {
+  opacity: 0.35;
+  filter: blur(1px);
+}
+.thumb-uploading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(128, 112, 182, 0.15);
+  color: var(--brown);
+  font-size: 10px;
+  font-weight: 700;
+  font-family: 'Baloo 2', cursive;
+  letter-spacing: 0.3px;
+  border-radius: inherit;
   animation: processingPulse 1.5s ease infinite;
 }
 

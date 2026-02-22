@@ -10,7 +10,7 @@ let sessionCode = null;
 let participants = [];
 let layers = [];       // sparse: layers[slotIndex] = photo object or null
 let photoBank = [];    // unassigned photos (max MAX_PHOTOS total)
-const MAX_PHOTOS = 20;
+const MAX_PHOTOS = 8;
 const imageCache = new Map();
 let isHost = false;
 
@@ -228,6 +228,22 @@ function loadImage(src) {
     img.src = src;
   });
 }
+// Strict version that rejects on error (for upload/confirm flows)
+function loadImageStrict(src) {
+  return new Promise((resolve, reject) => {
+    if (!src) return reject(new Error('No src'));
+    if (imageCache.has(src)) {
+      const cached = imageCache.get(src);
+      if (cached instanceof HTMLImageElement) return resolve(cached);
+      return reject(new Error('Cached as fallback'));
+    }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => { imageCache.set(src, img); resolve(img); };
+    img.onerror = () => reject(new Error('Failed to load ' + src));
+    img.src = src;
+  });
+}
 
 // ===== Canvas Sizing =====
 function resizeCanvasImmediate() {
@@ -371,12 +387,28 @@ function confirmLayerFromServer(serverLayer) {
       id: serverLayer.id, imageUrl: serverLayer.imageUrl,
       owner: serverLayer.owner, ts: serverLayer.timestamp, state: 'pending'
     });
-    loadImage(serverLayer.imageUrl).then(() => {
+    loadImageStrict(serverLayer.imageUrl).then(() => {
       const p = findPhotoByImageUrl(serverLayer.imageUrl);
-      if (p) { p.state = 'confirmed'; }
+      if (p) { p.state = 'confirmed'; p.dropProgress = 1; }
       renderPhotoBank();
       renderVbgPhotos();
       render();
+    }).catch(() => {
+      // Image failed to load — retry once after 2s
+      setTimeout(() => {
+        loadImageStrict(serverLayer.imageUrl).then(() => {
+          const p = findPhotoByImageUrl(serverLayer.imageUrl);
+          if (p) { p.state = 'confirmed'; p.dropProgress = 1; }
+          renderPhotoBank();
+          renderVbgPhotos();
+          render();
+        }).catch(() => {
+          // Give up — remove the broken photo
+          const idx = photoBank.findIndex(x => x.imageUrl === serverLayer.imageUrl);
+          if (idx >= 0) photoBank.splice(idx, 1);
+          renderPhotoBank();
+        });
+      }, 2000);
     });
   }
 }
@@ -411,10 +443,20 @@ function renderPhotoBank() {
 
     const img = document.createElement('img');
     img.className = 'thumb-img';
-    img.onerror = () => { img.style.background = '#ddd'; img.removeAttribute('src'); };
-    img.title = isLayerPending ? 'Loading...' : 'Slot ' + (i + 1) + ' — ' + (l.owner || '');
+    if (!isLayerPending) {
+      img.onerror = () => { img.style.background = '#ddd'; img.removeAttribute('src'); };
+    }
+    img.title = isLayerPending ? 'Uploading...' : 'Slot ' + (i + 1) + ' — ' + (l.owner || '');
     if (l.imageUrl) img.src = l.imageUrl;
     wrapper.appendChild(img);
+
+    // Uploading overlay for pending photos
+    if (isLayerPending) {
+      const overlay = document.createElement('div');
+      overlay.className = 'thumb-uploading-overlay';
+      overlay.textContent = 'Uploading...';
+      wrapper.appendChild(overlay);
+    }
 
     // Corner marker showing frame slot number
     const marker = document.createElement('span');
@@ -422,16 +464,18 @@ function renderPhotoBank() {
     marker.textContent = '#' + (i + 1);
     wrapper.appendChild(marker);
 
-    // Unassign button (send back to bank)
-    const unassign = document.createElement('button');
-    unassign.className = 'thumb-delete-btn';
-    unassign.textContent = '\u21A9';
-    unassign.title = 'Remove from frame';
-    unassign.onclick = ((idx) => (e) => {
-      e.stopPropagation();
-      unassignFromSlot(idx);
-    })(i);
-    wrapper.appendChild(unassign);
+    // Unassign button (only for confirmed photos)
+    if (!isLayerPending) {
+      const unassign = document.createElement('button');
+      unassign.className = 'thumb-delete-btn';
+      unassign.textContent = '\u21A9';
+      unassign.title = 'Remove from frame';
+      unassign.onclick = ((idx) => (e) => {
+        e.stopPropagation();
+        unassignFromSlot(idx);
+      })(i);
+      wrapper.appendChild(unassign);
+    }
 
     container.appendChild(wrapper);
   }
@@ -458,24 +502,35 @@ function renderPhotoBank() {
 
     const img = document.createElement('img');
     img.className = 'thumb-img';
-    img.onerror = () => { img.style.background = '#ddd'; img.removeAttribute('src'); };
-    img.title = isPending ? 'Loading...' : (p.owner || '') + ' (drag to frame)';
-    // Only set src once we know it's a valid URL (not a revoked blob)
+    if (!isPending) {
+      img.onerror = () => { img.style.background = '#ddd'; img.removeAttribute('src'); };
+    }
+    img.title = isPending ? 'Uploading...' : (p.owner || '') + ' (drag to frame)';
     if (p.imageUrl) img.src = p.imageUrl;
     wrapper.appendChild(img);
 
-    // Delete button
-    const del = document.createElement('button');
-    del.className = 'thumb-delete-btn';
-    del.textContent = '\u00D7';
-    del.title = 'Delete photo';
-    del.onclick = ((idx) => (e) => {
-      e.stopPropagation();
-      photoBank.splice(idx, 1);
-      renderPhotoBank();
-      updateSnapButton();
-    })(i);
-    wrapper.appendChild(del);
+    // Uploading overlay for pending photos
+    if (isPending) {
+      const overlay = document.createElement('div');
+      overlay.className = 'thumb-uploading-overlay';
+      overlay.textContent = 'Uploading...';
+      wrapper.appendChild(overlay);
+    }
+
+    // Delete button (only for confirmed photos)
+    if (!isPending) {
+      const del = document.createElement('button');
+      del.className = 'thumb-delete-btn';
+      del.textContent = '\u00D7';
+      del.title = 'Delete photo';
+      del.onclick = ((idx) => (e) => {
+        e.stopPropagation();
+        photoBank.splice(idx, 1);
+        renderPhotoBank();
+        updateSnapButton();
+      })(i);
+      wrapper.appendChild(del);
+    }
 
     container.appendChild(wrapper);
   }
@@ -483,6 +538,8 @@ function renderPhotoBank() {
 
 function assignToSlot(bankIndex, slotIndex) {
   if (bankIndex < 0 || bankIndex >= photoBank.length) return;
+  // Block assigning pending (still uploading) photos
+  if (photoBank[bankIndex].state === 'pending') return;
   const max = getMaxSlots();
   if (max !== Infinity && slotIndex >= max) return;
   const photo = photoBank.splice(bankIndex, 1)[0];
@@ -660,30 +717,44 @@ async function uploadAndEmit(processedCanvas) {
         const j = await uploadBlob(blob);
         const imageUrl = j.url;
         // Preload server URL into cache before swapping
-        await loadImage(imageUrl);
+        await loadImageStrict(imageUrl);
         const localPhoto = findPhotoByTempId(tempId);
         if (localPhoto) {
           URL.revokeObjectURL(localPhoto.imageUrl); // free blob memory
           localPhoto.imageUrl = imageUrl;
           localPhoto.tempId = null;
+          localPhoto.state = 'confirmed';
+          localPhoto.dropProgress = 1;
         } else {
-          addToPhotoBank({ imageUrl, owner: getMyName(), state: 'pending' });
+          addToPhotoBank({ imageUrl, owner: getMyName(), state: 'confirmed' });
         }
 
-        socket.emit('snapped', { code: sessionCode, imageUrl, name: getMyName() });
+        // Re-render immediately so DOM picks up the new server URL
+        renderPhotoBank();
+        renderVbgPhotos();
+        render();
 
-        // Auto-confirm after 800ms if server doesn't respond
-        setTimeout(() => {
-          const l = findPhotoByImageUrl(imageUrl);
-          if (l && l.state !== 'confirmed') {
-            l.state = 'confirmed'; l.dropProgress = 1;
-            renderPhotoBank(); render();
-          }
-        }, 800);
+        socket.emit('snapped', { code: sessionCode, imageUrl, name: getMyName() });
 
         resolve();
       } catch (err) {
         console.error('upload error', err);
+        // Remove the failed pending photo from bank
+        const failedIdx = photoBank.findIndex(p => p.tempId === tempId);
+        if (failedIdx >= 0) {
+          URL.revokeObjectURL(photoBank[failedIdx].imageUrl);
+          photoBank.splice(failedIdx, 1);
+        }
+        // Also check layers
+        for (let li = 0; li < layers.length; li++) {
+          if (layers[li] && layers[li].tempId === tempId) {
+            URL.revokeObjectURL(layers[li].imageUrl);
+            layers[li] = null;
+            break;
+          }
+        }
+        renderPhotoBank();
+        render();
         reject(err);
       }
     }, 'image/png', 0.9);
@@ -3002,11 +3073,10 @@ document.querySelectorAll('.deco-tool').forEach(btn => {
   });
 });
 
-// Sticker tabs (Emoji / HackHer / Boston / Vietnam)
+// Sticker tabs (Emoji / HackHer / Vietnam)
 const stickerTabIds = {
   emoji: 'stickerTabEmoji',
   hackher: 'stickerTabHackher',
-  boston: 'stickerTabBoston',
   vietnam: 'stickerTabVietnam',
 };
 document.querySelectorAll('.sticker-tab').forEach(tab => {
