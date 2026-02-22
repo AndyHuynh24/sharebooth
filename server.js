@@ -225,6 +225,19 @@ io.on('connection', socket => {
   socket.on('disconnect', () => {
     for (const c in sessions) {
       sessions[c].participants = sessions[c].participants.filter(p => p.id !== socket.id);
+      // Clean up session and its uploaded files when last participant leaves
+      if (sessions[c].participants.length === 0) {
+        // Delete uploaded files referenced by this session
+        const urls = sessions[c].layers
+          .filter(l => l && l.imageUrl)
+          .map(l => l.imageUrl);
+        for (const url of urls) {
+          const filePath = path.join(__dirname, url);
+          fs.unlink(filePath, () => {}); // ignore errors
+        }
+        delete sessions[c];
+        console.log('Session', c, 'cleaned up (no participants)');
+      }
     }
   });
 });

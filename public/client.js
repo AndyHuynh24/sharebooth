@@ -2,6 +2,11 @@
 
 const socket = io();
 
+// Ensure clean disconnect when closing/refreshing the page
+window.addEventListener('beforeunload', () => {
+  socket.disconnect();
+});
+
 // ===== State =====
 let sessionCode = null;
 let participants = [];
@@ -399,6 +404,7 @@ function renderPhotoBank() {
     const img = document.createElement('img');
     img.src = l.imageUrl;
     img.className = 'thumb-img';
+    img.onerror = () => { img.style.background = '#ddd'; img.removeAttribute('src'); };
     img.title = 'Slot ' + (i + 1) + ' — ' + (l.owner || '');
     wrapper.appendChild(img);
 
@@ -442,6 +448,7 @@ function renderPhotoBank() {
     const img = document.createElement('img');
     img.src = p.imageUrl;
     img.className = 'thumb-img';
+    img.onerror = () => { img.style.background = '#ddd'; img.removeAttribute('src'); };
     img.title = (p.owner || '') + ' (drag to frame)';
     wrapper.appendChild(img);
 
