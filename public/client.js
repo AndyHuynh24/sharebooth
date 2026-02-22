@@ -1,6 +1,6 @@
 // public/client.js - Sharebooth: layouts, decorations, live GIF, challenges
 
-const socket = io();
+const socket = io({ transports: ['websocket'], upgrade: false });
 
 // No beforeunload disconnect — let Socket.IO handle it naturally
 // with server-side grace period for reconnection
