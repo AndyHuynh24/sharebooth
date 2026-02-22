@@ -2380,6 +2380,7 @@ function showPromptFeedback() {
 
 // Store password for auto-rejoin on reconnect
 let sessionPassword = null;
+let hasJoinedSession = false; // true after first successful user-joined
 
 // ===== Socket Events =====
 socket.on('connect', () => {
@@ -2393,6 +2394,7 @@ socket.on('connect', () => {
 
 socket.on('user-joined', ({ participant, participants: ps }) => {
   participants = ps || [];
+  hasJoinedSession = true;
   syncSessionDisplay(undefined, participants.length);
   render();
 });
@@ -2673,11 +2675,12 @@ document.getElementById('wizardBack').onclick = () => {
 
 // Handle join error (wrong password, invalid code)
 socket.on('join-error', ({ message }) => {
-  // If already in session screen (e.g. reconnect after server restart), don't kick out
-  if (document.getElementById('screenSession').style.display === 'flex') {
+  // If we already joined successfully before, this is a reconnect failure — don't kick out
+  if (hasJoinedSession) {
     console.warn('join-error during reconnect:', message);
     return;
   }
+  // First join attempt failed — show error and go back to landing
   alert(message || 'Could not join session');
   document.getElementById('screenSession').style.display = 'none';
   document.getElementById('screenWizard').style.display = 'none';
@@ -2685,6 +2688,7 @@ socket.on('join-error', ({ message }) => {
   history.pushState(null, '', '/');
   sessionCode = null;
   sessionPassword = null;
+  hasJoinedSession = false;
 });
 
 // Sync session display
