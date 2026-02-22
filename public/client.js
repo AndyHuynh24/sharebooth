@@ -2573,8 +2573,9 @@ document.getElementById('btnJoin').onclick = async () => {
   history.pushState(null, '', '/' + sessionCode);
   syncSessionDisplay(sessionCode, '0');
   showSession();
-  await startCamera();
+  // Join the socket room immediately — don't wait for camera
   socket.emit('join', { code: sessionCode, name: getMyName() || 'Guest', password: password });
+  startCamera();
 };
 
 // ===== Wizard =====
@@ -2651,8 +2652,9 @@ document.getElementById('wizardNext').onclick = async () => {
   history.pushState(null, '', '/' + sessionCode);
   syncSessionDisplay(sessionCode, '0');
   showSession();
-  await startCamera();
+  // Join the socket room immediately — don't wait for camera
   socket.emit('join', { code: sessionCode, name: getMyName() || 'Host', password: wizardPassword });
+  startCamera();
 
   // Update layout & ratio UI in session screen
   updateLayoutUI();
