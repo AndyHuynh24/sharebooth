@@ -2,31 +2,29 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
-const multer = require('multer');
-const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { transports: ['websocket'], allowUpgrades: false });
+const io = new Server(server, {
+  transports: ['websocket'],
+  allowUpgrades: false,
+  maxHttpBufferSize: 5e6 // 5MB — enough for base64 image data
+});
 
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 const PUBLIC = path.join(__dirname, 'public');
-const UPLOADS = path.join(__dirname, 'uploads');
-if (!fs.existsSync(UPLOADS)) fs.mkdirSync(UPLOADS);
 const ASSETS = path.join(__dirname, 'assets');
 app.use('/', express.static(PUBLIC));
-app.use('/uploads', express.static(UPLOADS));
 app.use('/assets', express.static(ASSETS));
 
 // In-memory sessions
 const sessions = {};
-const cleanupTimers = {}; // code -> setTimeout id for delayed cleanup
+const cleanupTimers = {};
 
 app.post('/api/create', (req, res) => {
   const code = Math.floor(1000 + Math.random() * 9000).toString();
@@ -59,17 +57,6 @@ app.get('/api/session/:code', (req, res) => {
   });
 });
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, UPLOADS),
-  filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
-});
-const upload = multer({ storage });
-
-app.post('/api/upload', upload.single('photo'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'No file' });
-  res.json({ url: '/uploads/' + req.file.filename });
-});
-
 app.get('/api/sessions', (req, res) => res.json(Object.keys(sessions)));
 
 // Socket.IO
@@ -81,22 +68,22 @@ io.on('connection', socket => {
       socket.emit('join-error', { message: 'Invalid code' });
       return;
     }
-    // Password check
     if (sessions[code].password && sessions[code].password !== password) {
       socket.emit('join-error', { message: 'Incorrect password' });
       return;
     }
     socket.join(code);
-    // Cancel any pending cleanup timer since someone is joining
+    // Cancel any pending cleanup timer
     if (cleanupTimers[code]) {
       clearTimeout(cleanupTimers[code]);
       delete cleanupTimers[code];
-      console.log('Session', code, 'cleanup cancelled (participant rejoined)');
     }
+    // Remove any stale entry for this socket (in case of reconnect)
+    sessions[code].participants = sessions[code].participants.filter(p => p.id !== socket.id);
     const participant = { id: socket.id, name: name || 'Anon' };
     sessions[code].participants.push(participant);
     io.to(code).emit('user-joined', { participant, participants: sessions[code].participants });
-    console.log(code, 'joined', participant.name);
+    console.log(code, 'joined', participant.name, '(' + sessions[code].participants.length + ' total)');
 
     // Sync existing state to late joiners
     if (sessions[code].layers.length > 0) {
@@ -115,9 +102,10 @@ io.on('connection', socket => {
     }
   });
 
-  socket.on('snapped', ({ code, imageUrl, name }) => {
+  // Photo snap — receives base64 data URL directly (no file upload needed)
+  socket.on('snapped', ({ code, imageData, name }) => {
     if (!sessions[code]) return;
-    const layer = { id: uuidv4(), owner: name || 'Anon', imageUrl, timestamp: Date.now() };
+    const layer = { id: uuidv4(), owner: name || 'Anon', imageUrl: imageData, timestamp: Date.now() };
     sessions[code].layers.push(layer);
     socket.to(code).emit('snapped', { layer });
   });
@@ -232,27 +220,16 @@ io.on('connection', socket => {
   socket.on('disconnect', () => {
     for (const c in sessions) {
       sessions[c].participants = sessions[c].participants.filter(p => p.id !== socket.id);
-      // Schedule cleanup after grace period when last participant leaves
       if (sessions[c].participants.length === 0) {
-        // Cancel any existing cleanup timer (in case someone left and came back before)
         if (cleanupTimers[c]) clearTimeout(cleanupTimers[c]);
         const code = c;
         cleanupTimers[code] = setTimeout(() => {
-          // Re-check: only clean up if still no participants
           if (sessions[code] && sessions[code].participants.length === 0) {
-            const urls = sessions[code].layers
-              .filter(l => l && l.imageUrl)
-              .map(l => l.imageUrl);
-            for (const url of urls) {
-              const filePath = path.join(__dirname, url);
-              fs.unlink(filePath, () => {});
-            }
             delete sessions[code];
-            console.log('Session', code, 'cleaned up (no participants after grace period)');
+            console.log('Session', code, 'cleaned up');
           }
           delete cleanupTimers[code];
-        }, 60000); // 60 second grace period
-        console.log('Session', c, 'scheduled for cleanup in 60s');
+        }, 120000); // 2 min grace period
       }
     }
   });

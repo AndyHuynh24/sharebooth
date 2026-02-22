@@ -362,21 +362,15 @@ function confirmLayerFromServer(serverLayer) {
     existing.ts = serverLayer.timestamp || existing.ts;
     existing.state = 'confirmed';
     if (existing.dropProgress === 0) existing.dropProgress = 1;
-    renderPhotoBank();
-    renderVbgPhotos();
-    render();
   } else {
-    // Add and confirm immediately — loadImage handles fallback gracefully
     addToPhotoBank({
       id: serverLayer.id, imageUrl: serverLayer.imageUrl,
       owner: serverLayer.owner, ts: serverLayer.timestamp, state: 'confirmed'
     });
-    loadImage(serverLayer.imageUrl).then(() => {
-      renderPhotoBank();
-      renderVbgPhotos();
-      render();
-    });
   }
+  renderPhotoBank();
+  renderVbgPhotos();
+  render();
 }
 
 // ===== Photo Bank (below canvas) =====
@@ -611,14 +605,6 @@ function updateCameraButtonUI() {
   }
 }
 
-async function uploadBlob(blob) {
-  const fd = new FormData();
-  fd.append('photo', blob, 'snap.png');
-  const res = await fetch('/api/upload', { method: 'POST', body: fd });
-  if (!res.ok) throw new Error('upload failed');
-  return res.json();
-}
-
 let isProcessingSnap = false;
 
 function setSnapProcessing(processing) {
@@ -630,17 +616,14 @@ function setSnapProcessing(processing) {
     snapBtn.disabled = true;
     snapBtn.style.opacity = '0.4';
     stopBtn.disabled = true;
-    // Show feedback on camera
     overlay.querySelector('span').textContent = 'Enhancing your photo with advanced background removal\u2026 Please wait';
     overlay.style.display = 'flex';
-    // Pause live preview to free up resources during heavy BG removal
     if (segmentationLoop) { cancelAnimationFrame(segmentationLoop); segmentationLoop = null; }
   } else {
     snapBtn.disabled = !cameraRunning;
     snapBtn.style.opacity = cameraRunning ? '1' : '0.4';
     stopBtn.disabled = false;
     overlay.style.display = 'none';
-    // Resume live preview if it was active
     if (virtualBgEnabled && cameraRunning) startLivePreview();
   }
 }
@@ -651,13 +634,13 @@ async function doSnap() {
 
   let tmpCanvas;
   if (video && video.readyState >= 2) {
-    const targetW = 800;
+    const targetW = 480;
     const targetH = Math.round(targetW * (video.videoHeight / video.videoWidth || 3 / 4));
     tmpCanvas = document.createElement('canvas'); tmpCanvas.width = targetW; tmpCanvas.height = targetH;
     tmpCanvas.getContext('2d').drawImage(video, 0, 0, targetW, targetH);
   } else {
-    tmpCanvas = document.createElement('canvas'); tmpCanvas.width = 640; tmpCanvas.height = 480;
-    const tc = tmpCanvas.getContext('2d'); tc.fillStyle = '#ccc'; tc.fillRect(0, 0, 640, 480);
+    tmpCanvas = document.createElement('canvas'); tmpCanvas.width = 480; tmpCanvas.height = 360;
+    const tc = tmpCanvas.getContext('2d'); tc.fillStyle = '#ccc'; tc.fillRect(0, 0, 480, 360);
   }
 
   // BG removal (locks UI during processing)
@@ -670,61 +653,14 @@ async function doSnap() {
     }
   }
 
-  await uploadAndEmit(tmpCanvas);
+  snapAndEmit(tmpCanvas);
 }
 
-async function uploadAndEmit(processedCanvas) {
-  return new Promise((resolve, reject) => {
-    processedCanvas.toBlob(async (blob) => {
-      let tempId = null;
-      try {
-        tempId = generateId();
-        const localUrl = URL.createObjectURL(blob);
-        addToPhotoBank({ imageUrl: localUrl, owner: getMyName(), tempId, state: 'pending' });
-
-        const j = await uploadBlob(blob);
-        const imageUrl = j.url;
-
-        // Swap blob URL to server URL directly (trust the upload — don't pre-verify)
-        const localPhoto = findPhotoByTempId(tempId);
-        if (localPhoto) {
-          URL.revokeObjectURL(localPhoto.imageUrl);
-          localPhoto.imageUrl = imageUrl;
-          localPhoto.tempId = null;
-          localPhoto.state = 'confirmed';
-          localPhoto.dropProgress = 1;
-        } else {
-          addToPhotoBank({ imageUrl, owner: getMyName(), state: 'confirmed' });
-        }
-
-        renderPhotoBank();
-        renderVbgPhotos();
-        render();
-
-        socket.emit('snapped', { code: sessionCode, imageUrl, name: getMyName() });
-        resolve();
-      } catch (err) {
-        console.error('upload error', err);
-        if (tempId) {
-          const failedIdx = photoBank.findIndex(p => p.tempId === tempId);
-          if (failedIdx >= 0) {
-            URL.revokeObjectURL(photoBank[failedIdx].imageUrl);
-            photoBank.splice(failedIdx, 1);
-          }
-          for (let li = 0; li < layers.length; li++) {
-            if (layers[li] && layers[li].tempId === tempId) {
-              URL.revokeObjectURL(layers[li].imageUrl);
-              layers[li] = null;
-              break;
-            }
-          }
-        }
-        renderPhotoBank();
-        render();
-        reject(err);
-      }
-    }, 'image/png', 0.9);
-  });
+// Convert canvas to data URL and emit directly via socket — no file upload needed
+function snapAndEmit(processedCanvas) {
+  const dataUrl = processedCanvas.toDataURL('image/jpeg', 0.7);
+  addToPhotoBank({ imageUrl: dataUrl, owner: getMyName(), state: 'confirmed' });
+  socket.emit('snapped', { code: sessionCode, imageData: dataUrl, name: getMyName() });
 }
 
 // ===== Background Removal (dynamic import — ES module) =====
@@ -2740,11 +2676,12 @@ document.getElementById('wizardBack').onclick = () => {
 
 // Handle join error (wrong password, invalid code)
 socket.on('join-error', ({ message }) => {
-  // Suppress rejoin errors silently (session expired after refresh)
-  if (!document.getElementById('screenSession').style.display || document.getElementById('screenSession').style.display === 'none') {
-    // Not in session screen — show alert
-    alert(message || 'Could not join session');
+  // If already in session screen (e.g. reconnect after server restart), don't kick out
+  if (document.getElementById('screenSession').style.display === 'flex') {
+    console.warn('join-error during reconnect:', message);
+    return;
   }
+  alert(message || 'Could not join session');
   document.getElementById('screenSession').style.display = 'none';
   document.getElementById('screenWizard').style.display = 'none';
   document.getElementById('screenLanding').style.display = 'flex';
