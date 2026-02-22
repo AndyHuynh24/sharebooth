@@ -388,6 +388,7 @@ html, body {
   border-radius: var(--radius-md);
   padding: var(--sp-sm);
   box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
 }
 
 .camera-wrapper {
@@ -479,6 +480,7 @@ html, body {
   margin-top: var(--sp-xs);
   padding-top: var(--sp-xs);
   border-top: 1px solid rgba(0,0,0,0.06);
+  flex-wrap: wrap;
 }
 
 .virtual-bg-label {
@@ -931,11 +933,12 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: var(--sp-sm);
   flex: 1;
   min-width: 0;
-  overflow: visible;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 .session-col-left > * { width: 100%; }
 
