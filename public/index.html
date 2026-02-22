@@ -13,8 +13,7 @@
   <div id="screenLanding" class="screen screen-landing">
     <div class="landing-container">
       <div class="landing-logo">
-        <img src="logo.svg" alt="Sharebooth" width="72" height="72">
-        <h1>Sharebooth</h1>
+        <img src="/assets/logo/dark.png" alt="Sharebooth" class="landing-logo-img">
         <p class="landing-tagline">Snap photos with friends. No app needed.</p>
       </div>
       <div class="landing-actions">
@@ -23,8 +22,90 @@
         <div class="landing-divider"><span>or</span></div>
         <div class="join-row">
           <input id="joinCode" class="code-input" placeholder="Code" maxlength="4" inputmode="numeric" />
+          <input id="joinPassword" class="code-input" type="password" placeholder="Password" maxlength="20" style="flex:1" />
           <button id="btnJoin" class="btn btn-secondary btn-lg" style="width:auto">Join</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== SETUP WIZARD (host only) ========== -->
+  <div id="screenWizard" class="screen screen-wizard" style="display:none">
+    <div class="wizard-container">
+      <div class="wizard-header">
+        <img src="/assets/logo/dark.png" alt="Sharebooth" class="wizard-logo-img">
+        <h2>Set Up Your Booth</h2>
+        <p class="wizard-subtitle">Customize your photo session</p>
+      </div>
+
+      <div class="wizard-steps-indicator">
+        <span class="wizard-step-dot active current" data-step="1">1</span>
+        <span class="wizard-step-line"></span>
+        <span class="wizard-step-dot" data-step="2">2</span>
+        <span class="wizard-step-line"></span>
+        <span class="wizard-step-dot" data-step="3">3</span>
+      </div>
+
+      <!-- Step 1: Aspect Ratio -->
+      <div class="wizard-step" id="wizardStep1">
+        <h3 class="wizard-step-title">Choose Aspect Ratio</h3>
+        <div class="wizard-ratio-options">
+          <button class="wizard-opt" data-wratio="ig-post">IG Post (4:5)</button>
+          <button class="wizard-opt" data-wratio="ig-story">IG Story (9:16)</button>
+          <button class="wizard-opt" data-wratio="1:1">Square (1:1)</button>
+          <button class="wizard-opt" data-wratio="4:3">Landscape (4:3)</button>
+          <button class="wizard-opt" data-wratio="3:4">Portrait (3:4)</button>
+          <button class="wizard-opt" data-wratio="16:9">Widescreen (16:9)</button>
+          <button class="wizard-opt" data-wratio="2:3">Classic (2:3)</button>
+          <button class="wizard-opt active" data-wratio="4cut">4-Cut Strip</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Layout -->
+      <div class="wizard-step" id="wizardStep2" style="display:none">
+        <h3 class="wizard-step-title">Choose Layout</h3>
+        <div class="wizard-layout-options">
+          <button class="wizard-opt" data-wlayout="freeform" title="Freeform">
+            <svg viewBox="0 0 24 24" width="32" height="32"><rect x="2" y="3" width="8" height="7" rx="1" fill="currentColor" transform="rotate(-5 6 6.5)"/><rect x="12" y="1" width="9" height="7" rx="1" fill="currentColor" transform="rotate(3 16.5 4.5)"/><rect x="4" y="14" width="8" height="7" rx="1" fill="currentColor" transform="rotate(4 8 17.5)"/><rect x="14" y="13" width="8" height="7" rx="1" fill="currentColor" transform="rotate(-3 18 16.5)"/></svg>
+            <span>Freeform</span>
+          </button>
+          <button class="wizard-opt" data-wlayout="2cut" title="2-Cut">
+            <svg viewBox="0 0 18 28" width="24" height="32"><rect x="2" y="2" width="14" height="11" rx="2" fill="currentColor"/><rect x="2" y="15" width="14" height="11" rx="2" fill="currentColor"/></svg>
+            <span>2-Cut</span>
+          </button>
+          <button class="wizard-opt" data-wlayout="strip3" title="3-Photo Strip">
+            <svg viewBox="0 0 16 28" width="20" height="32"><rect x="2" y="1" width="12" height="7.5" rx="1" fill="currentColor"/><rect x="2" y="10.25" width="12" height="7.5" rx="1" fill="currentColor"/><rect x="2" y="19.5" width="12" height="7.5" rx="1" fill="currentColor"/></svg>
+            <span>Strip 3</span>
+          </button>
+          <button class="wizard-opt active" data-wlayout="strip" title="4-Cut Strip">
+            <svg viewBox="0 0 14 28" width="18" height="32"><rect x="1" y="1" width="12" height="5.5" rx="1" fill="currentColor"/><rect x="1" y="8" width="12" height="5.5" rx="1" fill="currentColor"/><rect x="1" y="15" width="12" height="5.5" rx="1" fill="currentColor"/><rect x="1" y="22" width="12" height="5.5" rx="1" fill="currentColor"/></svg>
+            <span>Strip 4</span>
+          </button>
+          <button class="wizard-opt" data-wlayout="2x2" title="2x2 Grid">
+            <svg viewBox="0 0 24 24" width="32" height="32"><rect x="1" y="1" width="10" height="10" rx="2" fill="currentColor"/><rect x="13" y="1" width="10" height="10" rx="2" fill="currentColor"/><rect x="1" y="13" width="10" height="10" rx="2" fill="currentColor"/><rect x="13" y="13" width="10" height="10" rx="2" fill="currentColor"/></svg>
+            <span>2x2</span>
+          </button>
+          <button class="wizard-opt" data-wlayout="6cut" title="6-Cut">
+            <svg viewBox="0 0 18 28" width="24" height="32"><rect x="1" y="1" width="7" height="7.5" rx="1" fill="currentColor"/><rect x="10" y="1" width="7" height="7.5" rx="1" fill="currentColor"/><rect x="1" y="10.25" width="7" height="7.5" rx="1" fill="currentColor"/><rect x="10" y="10.25" width="7" height="7.5" rx="1" fill="currentColor"/><rect x="1" y="19.5" width="7" height="7.5" rx="1" fill="currentColor"/><rect x="10" y="19.5" width="7" height="7.5" rx="1" fill="currentColor"/></svg>
+            <span>6-Cut</span>
+          </button>
+          <button class="wizard-opt" data-wlayout="1big3" title="1 Big + 3">
+            <svg viewBox="0 0 24 24" width="32" height="32"><rect x="1" y="1" width="14" height="22" rx="2" fill="currentColor"/><rect x="17" y="1" width="6" height="6" rx="1" fill="currentColor"/><rect x="17" y="9" width="6" height="6" rx="1" fill="currentColor"/><rect x="17" y="17" width="6" height="6" rx="1" fill="currentColor"/></svg>
+            <span>1+3</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 3: Password -->
+      <div class="wizard-step" id="wizardStep3" style="display:none">
+        <h3 class="wizard-step-title">Set a Password</h3>
+        <p class="wizard-step-desc">Friends will need this to join your session</p>
+        <input id="wizardPassword" class="name-input" type="password" placeholder="Room password" maxlength="20" autocomplete="off" />
+      </div>
+
+      <div class="wizard-nav">
+        <button id="wizardBack" class="btn btn-secondary" style="display:none">Back</button>
+        <button id="wizardNext" class="btn btn-primary">Next</button>
       </div>
     </div>
   </div>
@@ -32,15 +113,20 @@
   <!-- ========== SESSION SCREEN ========== -->
   <div id="screenSession" class="screen screen-session" style="display:none">
 
-    <!-- Top bar -->
+    <!-- Top bar: logo | toolbar | code -->
     <header class="topbar">
       <div class="topbar-left">
-        <img src="logo.svg" alt="" width="32" height="32">
-        <span class="topbar-title">Sharebooth</span>
+        <img src="/assets/logo/dark.png" alt="Sharebooth" class="topbar-logo-img">
       </div>
       <div class="topbar-right">
         <span class="session-code" id="sessionCodeDisplay">----</span>
-        <button id="btnCopyCode" class="btn btn-icon" title="Copy code">&#128203;</button>
+        <button id="btnCopyLink" class="btn btn-icon btn-share" title="Share link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+            <polyline points="16 6 12 2 8 6"/>
+            <line x1="12" y1="2" x2="12" y2="15"/>
+          </svg>
+        </button>
         <span class="participant-count" id="participantCount">0</span>
       </div>
     </header>
@@ -48,22 +134,27 @@
     <!-- Two-column layout for landscape -->
     <div class="session-columns">
 
-      <!-- LEFT COLUMN: camera + controls -->
+      <!-- LEFT COLUMN: camera + controls + deco + export -->
       <div class="session-col-left">
 
         <!-- Prompt area -->
         <section class="prompt-section">
+          <h3 class="prompt-title">Need pose ideas?</h3>
+          <p class="prompt-subtitle">Pick a vibe and hit Generate!</p>
           <div class="prompt-categories">
             <button class="prompt-cat active" data-cat="mix">Mix</button>
             <button class="prompt-cat" data-cat="funny">Funny</button>
-            <button class="prompt-cat" data-cat="silly">Silly</button>
             <button class="prompt-cat" data-cat="chill">Chill</button>
-            <button class="prompt-cat" data-cat="hype">Hype</button>
             <button class="prompt-cat" data-cat="love">Love</button>
           </div>
-          <button id="btnRandomPrompt" class="btn btn-accent">Random Prompt</button>
+          <button id="btnRandomPrompt" class="btn btn-primary">Generate Pose Prompt</button>
           <div id="promptDisplay" class="prompt-display"></div>
+          <div class="prompt-action-row" id="promptActionRow" style="display:none">
+            <button id="btnStartPrompt" class="btn btn-start-prompt">Ready? Go!</button>
+            <button id="btnRedoPrompt" class="btn btn-redo-prompt">Try Another</button>
+          </div>
           <div id="promptCountdown" class="prompt-countdown" style="display:none"></div>
+          <div id="promptFeedback" class="prompt-feedback" style="display:none"></div>
         </section>
 
         <!-- Camera section -->
@@ -84,7 +175,7 @@
               <button class="bg-dot active" data-bg="#FFF6EB" style="background:#FFF6EB" title="Cream"></button>
               <button class="bg-dot" data-bg="#C8FFE1" style="background:#C8FFE1" title="Mint"></button>
               <button class="bg-dot" data-bg="#A0D8FF" style="background:#A0D8FF" title="Blue"></button>
-              <button class="bg-dot" data-bg="#FFB6C1" style="background:#FFB6C1" title="Pink"></button>
+              <button class="bg-dot" data-bg="#B5A8D6" style="background:#B5A8D6" title="Purple"></button>
               <button class="bg-dot" data-bg="transparent" title="None">&#10005;</button>
             </div>
           </div>
@@ -95,7 +186,7 @@
               <button class="vbg-opt active" data-vbg="color:#FFF6EB" style="background:#FFF6EB" title="Cream"></button>
               <button class="vbg-opt" data-vbg="color:#C8FFE1" style="background:#C8FFE1" title="Mint"></button>
               <button class="vbg-opt" data-vbg="color:#A0D8FF" style="background:#A0D8FF" title="Blue"></button>
-              <button class="vbg-opt" data-vbg="color:#FFB6C1" style="background:#FFB6C1" title="Pink"></button>
+              <button class="vbg-opt" data-vbg="color:#B5A8D6" style="background:#B5A8D6" title="Purple"></button>
               <button class="vbg-opt" data-vbg="color:#222222" style="background:#222" title="Dark"></button>
               <button class="vbg-opt" data-vbg="none" title="Off">&#10005;</button>
               <input type="file" id="vbgUpload" accept="image/*" style="display:none" />
@@ -107,129 +198,291 @@
 
         <!-- SNAP + Stop camera buttons -->
         <div class="snap-section">
-          <button id="btnStopCamera" class="btn btn-icon camera-stop-btn" title="Stop camera">&#9724;</button>
+          <div class="camera-stop-wrapper">
+            <button id="btnStopCamera" class="btn btn-icon camera-stop-btn" title="Stop camera">&#9724;</button>
+            <span class="camera-stop-label">Pause</span>
+          </div>
           <button id="snap" class="btn-snap" aria-label="Take photo">
             <span class="snap-inner"></span>
+            <span class="snap-label">Capture</span>
           </button>
+          <div class="timer-dropdown" id="timerDropdown">
+            <button class="btn-timer-trigger" id="btnTimerTrigger" title="Capture timer">
+              <span class="timer-icon">&#9201;</span>
+              <span class="timer-value" id="timerValue">Off</span>
+            </button>
+            <div class="timer-panel" id="timerPanel" style="display:none">
+              <button class="timer-opt active" data-timer="0">Off</button>
+              <button class="timer-opt" data-timer="3">3s</button>
+              <button class="timer-opt" data-timer="5">5s</button>
+            </div>
+          </div>
         </div>
+
+        <!-- Decoration tools -->
+        <section class="deco-section" id="decoDialSection">
+          <button id="decoDialToggle" class="btn-deco-trigger">
+            <span class="deco-trigger-icon">&#43;</span>
+            <span>Add Decoration</span>
+          </button>
+          <div class="deco-panel" id="decoDial" style="display:none">
+            <div class="deco-tools">
+              <button class="deco-tool" data-tool="sticker" title="Sticker">
+                <span class="deco-tool-icon">&#11088;</span>
+                <span class="deco-tool-label">Sticker</span>
+              </button>
+              <button class="deco-tool" data-tool="text" title="Text">
+                <span class="deco-tool-icon">Aa</span>
+                <span class="deco-tool-label">Text</span>
+              </button>
+            </div>
+            <div id="stickerPickerArea" class="sticker-picker-area deco-subpanel" style="display:none">
+              <div class="sticker-tabs">
+                <button class="sticker-tab active" data-sticker-tab="emoji">Emoji</button>
+                <button class="sticker-tab" data-sticker-tab="hackher">HackHer</button>
+                <button class="sticker-tab" data-sticker-tab="boston">Boston</button>
+                <button class="sticker-tab" data-sticker-tab="vietnam">Vietnam</button>
+              </div>
+              <div class="sticker-tab-content" id="stickerTabEmoji">
+                <div class="emoji-picker">
+                  <span class="emoji-opt active">&#10084;&#65039;</span>
+                  <span class="emoji-opt">&#11088;</span>
+                  <span class="emoji-opt">&#128293;</span>
+                  <span class="emoji-opt">&#128514;</span>
+                  <span class="emoji-opt">&#10024;</span>
+                  <span class="emoji-opt">&#128077;</span>
+                  <span class="emoji-opt">&#128081;</span>
+                  <span class="emoji-opt">&#127752;</span>
+                  <span class="emoji-opt">&#127881;</span>
+                  <span class="emoji-opt">&#129395;</span>
+                  <span class="emoji-opt">&#128150;</span>
+                  <span class="emoji-opt">&#127775;</span>
+                </div>
+              </div>
+              <div class="sticker-tab-content" id="stickerTabHackher" style="display:none">
+                <div class="image-sticker-grid">
+                  <img class="img-sticker-opt" src="/assets/stickers/hackher/battery.png" data-sticker-src="/assets/stickers/hackher/battery.png" alt="Battery" />
+                  <img class="img-sticker-opt" src="/assets/stickers/hackher/camera.png" data-sticker-src="/assets/stickers/hackher/camera.png" alt="Camera" />
+                  <img class="img-sticker-opt" src="/assets/stickers/hackher/chatbox.png" data-sticker-src="/assets/stickers/hackher/chatbox.png" alt="Chatbox" />
+                  <img class="img-sticker-opt" src="/assets/stickers/hackher/game.png" data-sticker-src="/assets/stickers/hackher/game.png" alt="Game" />
+                  <img class="img-sticker-opt" src="/assets/stickers/hackher/game2.png" data-sticker-src="/assets/stickers/hackher/game2.png" alt="Game 2" />
+                  <img class="img-sticker-opt" src="/assets/stickers/hackher/phone.png" data-sticker-src="/assets/stickers/hackher/phone.png" alt="Phone" />
+                  <img class="img-sticker-opt" src="/assets/stickers/hackher/treasure.png" data-sticker-src="/assets/stickers/hackher/treasure.png" alt="Treasure" />
+                  <img class="img-sticker-opt" src="/assets/stickers/hackher/tree.png" data-sticker-src="/assets/stickers/hackher/tree.png" alt="Tree" />
+                </div>
+              </div>
+              <div class="sticker-tab-content" id="stickerTabBoston" style="display:none">
+                <div class="image-sticker-grid">
+                  <img class="img-sticker-opt" src="/assets/stickers/boston/8.png" data-sticker-src="/assets/stickers/boston/8.png" alt="Boston 1" />
+                  <img class="img-sticker-opt" src="/assets/stickers/boston/9.png" data-sticker-src="/assets/stickers/boston/9.png" alt="Boston 2" />
+                  <img class="img-sticker-opt" src="/assets/stickers/boston/10.png" data-sticker-src="/assets/stickers/boston/10.png" alt="Boston 3" />
+                </div>
+              </div>
+              <div class="sticker-tab-content" id="stickerTabVietnam" style="display:none">
+                <div class="image-sticker-grid">
+                  <img class="img-sticker-opt" src="/assets/stickers/vietnam/1.png" data-sticker-src="/assets/stickers/vietnam/1.png" alt="Vietnam 1" />
+                  <img class="img-sticker-opt" src="/assets/stickers/vietnam/2.png" data-sticker-src="/assets/stickers/vietnam/2.png" alt="Vietnam 2" />
+                  <img class="img-sticker-opt" src="/assets/stickers/vietnam/4.png" data-sticker-src="/assets/stickers/vietnam/4.png" alt="Vietnam 3" />
+                  <img class="img-sticker-opt" src="/assets/stickers/vietnam/5.png" data-sticker-src="/assets/stickers/vietnam/5.png" alt="Vietnam 4" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- More Customization (inline panel pops right) -->
+        <section class="custom-section" id="customSection">
+          <button id="btnSettings" class="btn-custom-trigger">
+            <span class="custom-trigger-icon">&#9881;</span>
+            <span>More Customization</span>
+          </button>
+          <div class="custom-panel" id="settingsPanel" style="display:none">
+            <div class="custom-panel-content">
+              <div class="settings-group">
+                <span class="settings-group-label">Frame Border</span>
+                <label class="frame-slider-label">
+                  Width
+                  <input type="range" id="frameBorderWidth" min="0" max="5" value="4" class="frame-slider" />
+                </label>
+                <label class="frame-slider-label">
+                  Radius
+                  <input type="range" id="frameBorderRadius" min="0" max="50" value="4" class="frame-slider" />
+                </label>
+                <label class="frame-slider-label">
+                  Color
+                  <input type="color" id="frameBorderColorPicker" value="#ffffff" class="fbg-color-picker" />
+                </label>
+              </div>
+              <div class="settings-group" id="bgScaleGroup" style="display:none">
+                <span class="settings-group-label">Background Size</span>
+                <label class="frame-slider-label">
+                  Tile Scale
+                  <input type="range" id="frameBgScaleSlider" min="5" max="100" value="25" class="frame-slider" />
+                </label>
+              </div>
+              <div class="settings-group">
+                <span class="settings-group-label">Add to Canvas</span>
+                <button id="btnAddDate" class="btn btn-secondary btn-sm">Add Date</button>
+                <button id="btnAddNames" class="btn btn-secondary btn-sm">Add Names</button>
+              </div>
+            </div>
+          </div>
+        </section>
 
       </div>
 
-      <!-- RIGHT COLUMN: frame + canvas + tools -->
+      <!-- RIGHT COLUMN: frame + canvas only -->
       <div class="session-col-right">
 
-        <!-- Layout picker -->
-        <section id="layoutPicker" class="layout-section">
-          <span class="layout-label">Layout:</span>
-          <div class="layout-options">
-            <button class="layout-opt" data-layout="2x2" title="2x2 Grid">
-              <svg viewBox="0 0 24 24" width="28" height="28"><rect x="1" y="1" width="10" height="10" rx="2" fill="currentColor"/><rect x="13" y="1" width="10" height="10" rx="2" fill="currentColor"/><rect x="1" y="13" width="10" height="10" rx="2" fill="currentColor"/><rect x="13" y="13" width="10" height="10" rx="2" fill="currentColor"/></svg>
-            </button>
-            <button class="layout-opt" data-layout="3x3" title="3x3 Grid">
-              <svg viewBox="0 0 24 24" width="28" height="28"><rect x="1" y="1" width="6" height="6" rx="1" fill="currentColor"/><rect x="9" y="1" width="6" height="6" rx="1" fill="currentColor"/><rect x="17" y="1" width="6" height="6" rx="1" fill="currentColor"/><rect x="1" y="9" width="6" height="6" rx="1" fill="currentColor"/><rect x="9" y="9" width="6" height="6" rx="1" fill="currentColor"/><rect x="17" y="9" width="6" height="6" rx="1" fill="currentColor"/><rect x="1" y="17" width="6" height="6" rx="1" fill="currentColor"/><rect x="9" y="17" width="6" height="6" rx="1" fill="currentColor"/><rect x="17" y="17" width="6" height="6" rx="1" fill="currentColor"/></svg>
-            </button>
-            <button class="layout-opt" data-layout="4x4" title="4x4 Grid">
-              <svg viewBox="0 0 24 24" width="28" height="28"><rect x="1" y="1" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="7" y="1" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="13" y="1" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="19" y="1" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="1" y="7" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="7" y="7" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="13" y="7" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="19" y="7" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="1" y="13" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="7" y="13" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="13" y="13" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="19" y="13" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="1" y="19" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="7" y="19" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="13" y="19" width="4.5" height="4.5" rx="1" fill="currentColor"/><rect x="19" y="19" width="4.5" height="4.5" rx="1" fill="currentColor"/></svg>
-            </button>
-            <button class="layout-opt" data-layout="1big3" title="1 Big + 3 Small">
-              <svg viewBox="0 0 24 24" width="28" height="28"><rect x="1" y="1" width="14" height="22" rx="2" fill="currentColor"/><rect x="17" y="1" width="6" height="6" rx="1" fill="currentColor"/><rect x="17" y="9" width="6" height="6" rx="1" fill="currentColor"/><rect x="17" y="17" width="6" height="6" rx="1" fill="currentColor"/></svg>
-            </button>
-            <button class="layout-opt" data-layout="strip" title="Photo Strip">
-              <svg viewBox="0 0 24 24" width="28" height="28"><rect x="6" y="1" width="12" height="4.5" rx="1" fill="currentColor"/><rect x="6" y="7" width="12" height="4.5" rx="1" fill="currentColor"/><rect x="6" y="13" width="12" height="4.5" rx="1" fill="currentColor"/><rect x="6" y="19" width="12" height="4.5" rx="1" fill="currentColor"/></svg>
-            </button>
-            <button class="layout-opt active" data-layout="freeform" title="Freeform">
-              <svg viewBox="0 0 24 24" width="28" height="28"><rect x="2" y="3" width="8" height="7" rx="1" fill="currentColor" transform="rotate(-5 6 6.5)"/><rect x="12" y="1" width="9" height="7" rx="1" fill="currentColor" transform="rotate(3 16.5 4.5)"/><rect x="4" y="14" width="8" height="7" rx="1" fill="currentColor" transform="rotate(4 8 17.5)"/><rect x="14" y="13" width="8" height="7" rx="1" fill="currentColor" transform="rotate(-3 18 16.5)"/></svg>
-            </button>
+        <!-- Main canvas area -->
+        <div class="right-main">
+
+          <!-- Layout & Ratio pickers above canvas -->
+          <div class="canvas-pickers">
+            <div class="picker-dropdown" id="layoutDropdown">
+              <button class="picker-trigger" id="btnLayoutTrigger">Change Layout</button>
+              <div class="picker-panel" id="layoutPanel" style="display:none">
+                <div class="layout-options">
+                  <button class="layout-opt" data-layout="2cut" title="2-Cut">
+                    <svg viewBox="0 0 18 28" width="18" height="26"><rect x="2" y="2" width="14" height="11" rx="2" fill="currentColor"/><rect x="2" y="15" width="14" height="11" rx="2" fill="currentColor"/></svg>
+                  </button>
+                  <button class="layout-opt" data-layout="strip3" title="3-Photo Strip">
+                    <svg viewBox="0 0 16 28" width="16" height="26"><rect x="2" y="1" width="12" height="7.5" rx="1" fill="currentColor"/><rect x="2" y="10.25" width="12" height="7.5" rx="1" fill="currentColor"/><rect x="2" y="19.5" width="12" height="7.5" rx="1" fill="currentColor"/></svg>
+                  </button>
+                  <button class="layout-opt active" data-layout="strip" title="4-Cut Strip">
+                    <svg viewBox="0 0 14 28" width="14" height="26"><rect x="1" y="1" width="12" height="5.5" rx="1" fill="currentColor"/><rect x="1" y="8" width="12" height="5.5" rx="1" fill="currentColor"/><rect x="1" y="15" width="12" height="5.5" rx="1" fill="currentColor"/><rect x="1" y="22" width="12" height="5.5" rx="1" fill="currentColor"/></svg>
+                  </button>
+                  <button class="layout-opt" data-layout="2x2" title="2x2 Grid">
+                    <svg viewBox="0 0 24 24" width="24" height="24"><rect x="1" y="1" width="10" height="10" rx="2" fill="currentColor"/><rect x="13" y="1" width="10" height="10" rx="2" fill="currentColor"/><rect x="1" y="13" width="10" height="10" rx="2" fill="currentColor"/><rect x="13" y="13" width="10" height="10" rx="2" fill="currentColor"/></svg>
+                  </button>
+                  <button class="layout-opt" data-layout="6cut" title="6-Cut Grid">
+                    <svg viewBox="0 0 18 28" width="18" height="26"><rect x="1" y="1" width="7" height="7.5" rx="1" fill="currentColor"/><rect x="10" y="1" width="7" height="7.5" rx="1" fill="currentColor"/><rect x="1" y="10.25" width="7" height="7.5" rx="1" fill="currentColor"/><rect x="10" y="10.25" width="7" height="7.5" rx="1" fill="currentColor"/><rect x="1" y="19.5" width="7" height="7.5" rx="1" fill="currentColor"/><rect x="10" y="19.5" width="7" height="7.5" rx="1" fill="currentColor"/></svg>
+                  </button>
+                  <button class="layout-opt" data-layout="1big3" title="1 Big + 3 Small">
+                    <svg viewBox="0 0 24 24" width="24" height="24"><rect x="1" y="1" width="14" height="22" rx="2" fill="currentColor"/><rect x="17" y="1" width="6" height="6" rx="1" fill="currentColor"/><rect x="17" y="9" width="6" height="6" rx="1" fill="currentColor"/><rect x="17" y="17" width="6" height="6" rx="1" fill="currentColor"/></svg>
+                  </button>
+                  <button class="layout-opt" data-layout="freeform" title="Freeform">
+                    <svg viewBox="0 0 24 24" width="24" height="24"><rect x="2" y="3" width="8" height="7" rx="1" fill="currentColor" transform="rotate(-5 6 6.5)"/><rect x="12" y="1" width="9" height="7" rx="1" fill="currentColor" transform="rotate(3 16.5 4.5)"/><rect x="4" y="14" width="8" height="7" rx="1" fill="currentColor" transform="rotate(4 8 17.5)"/><rect x="14" y="13" width="8" height="7" rx="1" fill="currentColor" transform="rotate(-3 18 16.5)"/></svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div class="picker-dropdown" id="ratioDropdown">
+              <button class="picker-trigger" id="btnRatioTrigger">Change Aspect Ratio</button>
+              <div class="picker-panel" id="ratioPanel" style="display:none">
+                <div class="ratio-options">
+                  <button class="ratio-opt" data-ratio="ig-post" title="Instagram Post 4:5">IG Post</button>
+                  <button class="ratio-opt" data-ratio="ig-story" title="Instagram Story 9:16">IG Story</button>
+                  <button class="ratio-opt" data-ratio="1:1" title="Square">1:1</button>
+                  <button class="ratio-opt" data-ratio="4:3" title="Landscape">4:3</button>
+                  <button class="ratio-opt" data-ratio="3:4" title="Portrait">3:4</button>
+                  <button class="ratio-opt" data-ratio="16:9" title="Widescreen">16:9</button>
+                  <button class="ratio-opt" data-ratio="2:3" title="Classic portrait">2:3</button>
+                  <button class="ratio-opt active" data-ratio="4cut" title="4-Cut strip">4-Cut</button>
+                </div>
+              </div>
+            </div>
+            <div class="picker-dropdown" id="bgDropdown">
+              <button class="picker-trigger" id="btnBgTrigger">Change Background</button>
+              <div class="picker-panel" id="bgPanel" style="display:none">
+                <div class="frame-bg-options">
+                  <button class="fbg-opt" data-fbg="color:#FFF6EB" style="background:#FFF6EB" title="Cream"></button>
+                  <button class="fbg-opt" data-fbg="color:#FFFFFF" style="background:#FFF;border:1px solid #ddd" title="White"></button>
+                  <button class="fbg-opt" data-fbg="color:#B5A8D6" style="background:#B5A8D6" title="Light Purple"></button>
+                  <button class="fbg-opt active" data-fbg="color:#8070B6" style="background:#8070B6" title="Purple"></button>
+                  <button class="fbg-opt" data-fbg="color:#222222" style="background:#222" title="Dark"></button>
+                  <input type="color" id="fbgColorPicker" class="fbg-color-rainbow" value="#8070B6" title="Custom color" />
+                  <input type="file" id="fbgImageUpload" accept="image/*" style="display:none" />
+                  <button class="fbg-opt fbg-upload-btn" title="Upload background image">&#128247;</button>
+                </div>
+              </div>
+            </div>
           </div>
-        </section>
 
-        <!-- Frame shape controls -->
-        <section class="frame-shape-section">
-          <span class="frame-shape-label">Frame:</span>
-          <div class="frame-shape-options">
-            <button class="fshape-opt active" data-shape="rect" title="Re
-            ctangle">&#9724;</button>
-            <button class="fshape-opt" data-shape="rounded" title="Rounded">&#9646;</button>
-            <button class="fshape-opt" data-shape="circle" title="Circle">&#9679;</button>
-            <button class="fshape-opt" data-shape="heart" title="Heart">&#10084;</button>
-            <button class="fshape-opt" data-shape="star" title="Star">&#9733;</button>
+          <!-- Canvas preview -->
+          <section class="canvas-section">
+            <div id="preview" class="canvas-preview">
+              <canvas id="canvas"></canvas>
+              <canvas id="decoCanvas"></canvas>
+              <!-- Floating delete button on selected decoration -->
+              <button id="floatingDecoDelete" class="floating-deco-delete" style="display:none" title="Delete decoration">&#128465;</button>
+              <!-- Floating text edit toolbar -->
+              <div id="floatingTextEdit" class="floating-text-edit" style="display:none">
+                <input type="color" id="decoTextColor" class="deco-text-color" value="#8B6B4A" title="Text color" />
+                <select id="decoTextFont" class="deco-text-font" title="Font">
+                  <option value="Baloo 2">Baloo 2</option>
+                  <option value="Inter">Inter</option>
+                  <option value="Georgia">Georgia</option>
+                  <option value="Courier New">Courier</option>
+                  <option value="Arial">Arial</option>
+                </select>
+                <select id="decoTextSize" class="deco-text-size" title="Size">
+                  <option value="12">12</option>
+                  <option value="16">16</option>
+                  <option value="18" selected>18</option>
+                  <option value="24">24</option>
+                  <option value="32">32</option>
+                  <option value="48">48</option>
+                </select>
+                <select id="decoTextWeight" class="deco-text-weight" title="Style">
+                  <option value="400">Regular</option>
+                  <option value="600" selected>Semi-Bold</option>
+                  <option value="700">Bold</option>
+                </select>
+                <input type="color" id="decoTextBg" class="deco-text-bg" value="#ffffff" title="Background" />
+                <label class="deco-text-bg-toggle" title="Toggle background">
+                  <input type="checkbox" id="decoTextBgToggle" />
+                  <span>BG</span>
+                </label>
+              </div>
+              <!-- Floating shape picker on selected photo -->
+              <div id="floatingShapePicker" class="floating-shape-picker" style="display:none">
+                <button class="fshape-opt active" data-shape="rounded" title="Rounded">&#9646;</button>
+                <button class="fshape-opt" data-shape="circle" title="Circle">&#9679;</button>
+                <button class="fshape-opt" data-shape="oval" title="Oval">&#11044;</button>
+                <button class="fshape-opt" data-shape="heart" title="Heart">&#10084;</button>
+                <button class="fshape-opt" data-shape="star" title="Star">&#9733;</button>
+                <button class="fshape-opt" data-shape="cloud" title="Cloud">&#9729;</button>
+                <button class="fshape-remove-btn" id="btnRemoveFromCanvas" title="Remove from canvas">&#128465;</button>
+              </div>
+            </div>
+          </section>
+
+        </div>
+
+        <!-- Right sidebar: Photo Bank + Export -->
+        <aside class="right-sidebar">
+          <div class="photo-bank-sidebar">
+            <div class="bank-header">
+              <span class="bank-label">Photo Bank</span>
+              <span id="photoCounter" class="photo-counter"></span>
+            </div>
+            <div id="thumbs" class="thumbs-row"></div>
           </div>
-          <label class="frame-slider-label">
-            Border
-            <input type="range" id="frameBorderWidth" min="0" max="20" value="6" class="frame-slider" />
-          </label>
-          <label class="frame-slider-label">
-            Radius
-            <input type="range" id="frameBorderRadius" min="0" max="50" value="4" class="frame-slider" />
-          </label>
-          <label class="frame-slider-label">
-            Color
-            <input type="color" id="frameBorderColorPicker" value="#ffffff" class="fbg-color-picker" />
-          </label>
-        </section>
-
-        <!-- Frame background picker -->
-        <section class="frame-bg-section">
-          <span class="frame-bg-label">Background:</span>
-          <div class="frame-bg-options">
-            <button class="fbg-opt active" data-fbg="color:#FFF6EB" style="background:#FFF6EB" title="Cream"></button>
-            <button class="fbg-opt" data-fbg="color:#FFFFFF" style="background:#FFF;border:1px solid #ddd" title="White"></button>
-            <button class="fbg-opt" data-fbg="color:#FFB6C1" style="background:#FFB6C1" title="Pink"></button>
-            <button class="fbg-opt" data-fbg="color:#C8FFE1" style="background:#C8FFE1" title="Mint"></button>
-            <button class="fbg-opt" data-fbg="color:#A0D8FF" style="background:#A0D8FF" title="Blue"></button>
-            <button class="fbg-opt" data-fbg="color:#222222" style="background:#222" title="Dark"></button>
-            <input type="color" id="fbgColorPicker" class="fbg-color-picker" value="#FFF6EB" title="Custom color" />
-            <input type="file" id="fbgImageUpload" accept="image/*" style="display:none" />
-            <button class="fbg-opt fbg-upload-btn" title="Upload background image">&#128247;</button>
+          <div class="export-sidebar">
+            <button id="finish" class="btn btn-primary btn-finish-main">Finish? Click Here</button>
+            <div id="shareArea" class="share-area"></div>
           </div>
-        </section>
+        </aside>
 
-        <!-- Canvas preview -->
-        <section class="canvas-section">
-          <div id="preview" class="canvas-preview">
-            <canvas id="canvas"></canvas>
-            <canvas id="decoCanvas"></canvas>
-          </div>
-        </section>
+      </div>
+    </div>
 
-        <!-- Decoration toolbar -->
-        <section class="deco-toolbar" id="decoToolbar">
-          <div class="deco-tools">
-            <button class="deco-tool active" data-tool="none" title="Select / Move">&#9995;</button>
-            <button class="deco-tool" data-tool="sticker" title="Place sticker">&#11088;</button>
-            <button class="deco-tool" data-tool="text" title="Add text">Aa</button>
-            <button class="deco-tool deco-delete" data-tool="delete" title="Delete selected">&#128465;</button>
-          </div>
-          <div id="emojiPicker" class="emoji-picker" style="display:none">
-            <span class="emoji-opt active">&#10084;&#65039;</span>
-            <span class="emoji-opt">&#11088;</span>
-            <span class="emoji-opt">&#128293;</span>
-            <span class="emoji-opt">&#128514;</span>
-            <span class="emoji-opt">&#10024;</span>
-            <span class="emoji-opt">&#128077;</span>
-            <span class="emoji-opt">&#128081;</span>
-            <span class="emoji-opt">&#127752;</span>
-            <span class="emoji-opt">&#127881;</span>
-            <span class="emoji-opt">&#129395;</span>
-            <span class="emoji-opt">&#128150;</span>
-            <span class="emoji-opt">&#127775;</span>
-          </div>
-        </section>
 
-        <!-- Thumbnails -->
-        <section class="thumbs-section">
-          <div id="thumbs" class="thumbs-row"></div>
-        </section>
 
-        <!-- Export bar -->
-        <section class="export-section">
-          <button id="exportPng" class="btn btn-secondary">Export PNG</button>
-          <button id="exportGif" class="btn btn-secondary">Export GIF</button>
-          <span id="gifProgress" class="gif-progress" style="display:none"></span>
-          <button id="finish" class="btn btn-primary">Finish Session</button>
-          <div id="shareArea" class="share-area"></div>
-        </section>
-
+    <!-- Export format modal -->
+    <div id="exportModal" class="export-modal-overlay" style="display:none">
+      <div class="export-modal">
+        <h3 class="export-modal-title">Export Your Creation</h3>
+        <p class="export-modal-subtitle">Save as image</p>
+        <div class="export-modal-options">
+          <button id="exportModalPng" class="export-modal-opt">
+            <span class="export-modal-opt-icon">&#128248;</span>
+            <span class="export-modal-opt-label">PNG</span>
+            <span class="export-modal-opt-desc">High quality image</span>
+          </button>
+        </div>
+        <button id="exportModalClose" class="export-modal-close">Cancel</button>
       </div>
     </div>
 
