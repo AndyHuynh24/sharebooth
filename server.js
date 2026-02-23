@@ -26,8 +26,19 @@ app.use('/assets', express.static(ASSETS));
 const sessions = {};
 const cleanupTimers = {};
 
+function generateUniqueCode() {
+  const existing = new Set(Object.keys(sessions));
+  if (existing.size >= 9000) return null; // all 1000-9999 taken
+  let code;
+  do {
+    code = Math.floor(1000 + Math.random() * 9000).toString();
+  } while (existing.has(code));
+  return code;
+}
+
 app.post('/api/create', (req, res) => {
-  const code = Math.floor(1000 + Math.random() * 9000).toString();
+  const code = generateUniqueCode();
+  if (!code) return res.status(503).json({ error: 'No room codes available' });
   const { password, aspectRatio, layout } = req.body || {};
   sessions[code] = {
     id: uuidv4(),
@@ -219,8 +230,15 @@ io.on('connection', socket => {
 
   socket.on('disconnect', () => {
     for (const c in sessions) {
+      const before = sessions[c].participants.length;
       sessions[c].participants = sessions[c].participants.filter(p => p.id !== socket.id);
-      if (sessions[c].participants.length === 0) {
+      const after = sessions[c].participants.length;
+      // Only broadcast if this socket was actually in this session
+      if (before !== after) {
+        io.to(c).emit('user-left', { participantId: socket.id, participants: sessions[c].participants });
+        console.log(c, 'left (' + after + ' remaining)');
+      }
+      if (after === 0) {
         if (cleanupTimers[c]) clearTimeout(cleanupTimers[c]);
         const code = c;
         cleanupTimers[code] = setTimeout(() => {
@@ -229,7 +247,7 @@ io.on('connection', socket => {
             console.log('Session', code, 'cleaned up');
           }
           delete cleanupTimers[code];
-        }, 120000); // 2 min grace period
+        }, 60000); // 1 min grace period
       }
     }
   });

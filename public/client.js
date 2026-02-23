@@ -2411,6 +2411,12 @@ socket.on('user-joined', ({ participant, participants: ps }) => {
   render();
 });
 
+socket.on('user-left', ({ participantId, participants: ps }) => {
+  participants = ps || [];
+  syncSessionDisplay(undefined, participants.length);
+  render();
+});
+
 socket.on('snapped', ({ layer: sl }) => confirmLayerFromServer(sl));
 
 socket.on('finish', ({ layers: finalLayers }) => {
