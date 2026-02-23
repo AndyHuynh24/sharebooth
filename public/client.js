@@ -2652,16 +2652,24 @@ document.getElementById('wizardNext').onclick = async () => {
   wizardPassword = document.getElementById('wizardPassword').value.trim();
   if (!wizardPassword) { alert('Please set a password'); return; }
 
-  const res = await fetch('/api/create', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      password: wizardPassword,
-      aspectRatio: wizardAspectRatio,
-      layout: wizardLayout
-    })
-  });
-  const j = await res.json();
+  let j;
+  try {
+    const res = await fetch('/api/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        password: wizardPassword,
+        aspectRatio: wizardAspectRatio,
+        layout: wizardLayout
+      })
+    });
+    if (!res.ok) throw new Error('Server error');
+    j = await res.json();
+    if (!j.code) throw new Error('No code returned');
+  } catch (e) {
+    alert('Failed to create session. Please try again.');
+    return;
+  }
   sessionCode = j.code;
   isHost = true;
 
@@ -2691,6 +2699,12 @@ document.getElementById('wizardBack').onclick = () => {
     wizardStep--;
     updateWizardUI();
   }
+};
+
+// Wizard Home button — back to landing
+document.getElementById('wizardHome').onclick = () => {
+  document.getElementById('screenWizard').style.display = 'none';
+  document.getElementById('screenLanding').style.display = 'flex';
 };
 
 // Handle join error (wrong password, invalid code)
