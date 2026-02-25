@@ -2316,7 +2316,7 @@ const PROMPT_FEEDBACKS = [
 
 function showPrompt(text) {
   const display = document.getElementById('promptDisplay');
-  const actionRow = document.getElementById('promptActionRow');
+  const result = document.getElementById('promptResult');
   const feedback = document.getElementById('promptFeedback');
   const countdownEl = document.getElementById('promptCountdown');
   const generateBtn = document.getElementById('btnRandomPrompt');
@@ -2326,22 +2326,22 @@ function showPrompt(text) {
   countdownEl.style.display = 'none';
   feedback.style.display = 'none';
 
-  // Hide generate button to save space, show prompt text
+  // Hide generate button, show result (prompt text + redo) in swap zone
   generateBtn.style.display = 'none';
   display.textContent = text;
   display.classList.remove('animate');
   void display.offsetHeight;
   display.classList.add('animate');
-
-  // Show the action row (Ready + Redo)
-  actionRow.style.display = 'flex';
+  result.style.display = 'flex';
 }
 
 function startPromptCountdown() {
   if (countdownInterval) clearInterval(countdownInterval);
   const el = document.getElementById('promptCountdown');
-  const actionRow = document.getElementById('promptActionRow');
-  actionRow.style.display = 'none';
+  const result = document.getElementById('promptResult');
+  const generateBtn = document.getElementById('btnRandomPrompt');
+  result.style.display = 'none';
+  generateBtn.style.display = 'none';
   el.style.display = 'block';
   let count = 3;
   el.textContent = count;
@@ -2360,13 +2360,12 @@ function startPromptCountdown() {
 
 function showPromptFeedback() {
   const feedback = document.getElementById('promptFeedback');
-  const display = document.getElementById('promptDisplay');
+  const result = document.getElementById('promptResult');
   const generateBtn = document.getElementById('btnRandomPrompt');
-  const n = Math.max(1, participants.length);
   const template = PROMPT_FEEDBACKS[Math.floor(Math.random() * PROMPT_FEEDBACKS.length)];
-  const msg = template;
-  display.textContent = '';
-  feedback.textContent = msg;
+  result.style.display = 'none';
+  generateBtn.style.display = 'none';
+  feedback.textContent = template;
   feedback.style.display = 'block';
   feedback.classList.remove('animate');
   void feedback.offsetHeight;
@@ -2733,11 +2732,14 @@ function syncSessionDisplay(code, count) {
   if (countEl && count !== undefined) countEl.textContent = count;
 }
 
-// Copy shareable link (share button)
+// Copy shareable link (share button) — includes password so recipients can join directly
 document.getElementById('btnCopyLink').onclick = function() {
   const btn = this;
   if (sessionCode) {
-    const link = window.location.origin + '/' + sessionCode;
+    let link = window.location.origin + '/' + sessionCode;
+    if (sessionPassword) {
+      link += '?pw=' + encodeURIComponent(sessionPassword);
+    }
     navigator.clipboard.writeText(link).then(() => {
       const origHTML = btn.innerHTML;
       btn.textContent = '\u2705';
@@ -2775,7 +2777,7 @@ document.querySelectorAll('.timer-opt').forEach(btn => {
 
 function startCaptureWithTimer() {
   if (captureTimerSeconds === 0) {
-    doSnap().catch(e => { console.error('snap failed', e); alert('Snap failed: ' + (e.message || e)); });
+    doSnap().then(() => showPromptFeedback()).catch(e => { console.error('snap failed', e); alert('Snap failed: ' + (e.message || e)); });
     return;
   }
   // Show countdown overlay
@@ -2793,7 +2795,7 @@ function startCaptureWithTimer() {
     if (remaining <= 0) {
       clearInterval(interval);
       overlay.remove();
-      doSnap().catch(e => { console.error('snap failed', e); alert('Snap failed: ' + (e.message || e)); });
+      doSnap().then(() => showPromptFeedback()).catch(e => { console.error('snap failed', e); alert('Snap failed: ' + (e.message || e)); });
     } else {
       num.textContent = remaining;
     }
@@ -2849,9 +2851,7 @@ document.getElementById('btnRandomPrompt').addEventListener('click', () => {
   if (sessionCode) socket.emit('prompt', { code: sessionCode, text });
 });
 
-document.getElementById('btnStartPrompt').addEventListener('click', () => {
-  startPromptCountdown();
-});
+// btnStartPrompt removed — users just hit Capture directly
 
 document.getElementById('btnRedoPrompt').addEventListener('click', () => {
   const text = getRandomPrompt(selectedCategory);
@@ -2868,15 +2868,35 @@ document.getElementById('btnStopCamera').addEventListener('click', () => {
   }
 });
 
-// Background removal
+// Remove BG panel toggle (popout like deco-panel)
+document.getElementById('bgRemoveToggleBtn').addEventListener('click', () => {
+  const panel = document.getElementById('rmbgPanel');
+  const btn = document.getElementById('bgRemoveToggleBtn');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  btn.classList.toggle('active', !isOpen);
+});
+// Close rmbg panel when clicking outside
+document.addEventListener('click', e => {
+  const section = document.getElementById('rmbgSection');
+  const panel = document.getElementById('rmbgPanel');
+  if (panel.style.display !== 'none' && !section.contains(e.target)) {
+    panel.style.display = 'none';
+    document.getElementById('bgRemoveToggleBtn').classList.remove('active');
+  }
+});
+// Background removal enable/disable
 document.getElementById('bgRemoveToggle').addEventListener('change', e => {
   bgRemovalEnabled = e.target.checked;
-  document.getElementById('bgPresets').style.display = bgRemovalEnabled ? 'flex' : 'none';
-  document.getElementById('virtualBgSection').style.display = bgRemovalEnabled ? 'flex' : 'none';
   if (!bgRemovalEnabled) {
     virtualBgEnabled = false;
     stopLivePreview();
   }
+});
+// Custom BG color picker
+document.getElementById('bgColorCustom').addEventListener('input', e => {
+  document.querySelectorAll('.bg-dot').forEach(b => b.classList.remove('active'));
+  selectedBgColor = e.target.value;
 });
 
 document.querySelectorAll('.bg-dot').forEach(btn => {
@@ -2925,17 +2945,19 @@ const layoutDropdown = document.getElementById('layoutDropdown');
 const btnRatioTrigger = document.getElementById('btnRatioTrigger');
 const ratioPanel = document.getElementById('ratioPanel');
 const ratioDropdown = document.getElementById('ratioDropdown');
-const btnBgTrigger = document.getElementById('btnBgTrigger');
-const bgPanel = document.getElementById('bgPanel');
-const bgDropdown = document.getElementById('bgDropdown');
-
 function closeAllPickers() {
   layoutPanel.style.display = 'none';
   btnLayoutTrigger.classList.remove('active');
   ratioPanel.style.display = 'none';
   btnRatioTrigger.classList.remove('active');
-  bgPanel.style.display = 'none';
-  btnBgTrigger.classList.remove('active');
+  const sp = document.getElementById('settingsPanel');
+  const bs = document.getElementById('btnSettings');
+  if (sp) { sp.style.display = 'none'; }
+  if (bs) { bs.classList.remove('active'); }
+  const dd = document.getElementById('decoDial');
+  const dt = document.getElementById('decoDialToggle');
+  if (dd) { dd.style.display = 'none'; }
+  if (dt) { dt.classList.remove('active'); }
 }
 
 btnLayoutTrigger.addEventListener('click', () => {
@@ -2954,14 +2976,6 @@ btnRatioTrigger.addEventListener('click', () => {
     btnRatioTrigger.classList.add('active');
   }
 });
-btnBgTrigger.addEventListener('click', () => {
-  const isOpen = bgPanel.style.display !== 'none';
-  closeAllPickers();
-  if (!isOpen) {
-    bgPanel.style.display = 'flex';
-    btnBgTrigger.classList.add('active');
-  }
-});
 document.addEventListener('click', (e) => {
   if (!layoutDropdown.contains(e.target) && layoutPanel.style.display !== 'none') {
     layoutPanel.style.display = 'none';
@@ -2970,10 +2984,6 @@ document.addEventListener('click', (e) => {
   if (!ratioDropdown.contains(e.target) && ratioPanel.style.display !== 'none') {
     ratioPanel.style.display = 'none';
     btnRatioTrigger.classList.remove('active');
-  }
-  if (!bgDropdown.contains(e.target) && bgPanel.style.display !== 'none') {
-    bgPanel.style.display = 'none';
-    btnBgTrigger.classList.remove('active');
   }
 });
 
@@ -2984,8 +2994,11 @@ const decoDialSection = document.getElementById('decoDialSection');
 
 decoDialToggle.addEventListener('click', () => {
   const isOpen = decoDial.style.display !== 'none';
-  decoDial.style.display = isOpen ? 'none' : 'flex';
-  decoDialToggle.classList.toggle('active', !isOpen);
+  closeAllPickers();
+  if (!isOpen) {
+    decoDial.style.display = 'flex';
+    decoDialToggle.classList.add('active');
+  }
 });
 
 // Close deco panel on outside click
@@ -3356,6 +3369,7 @@ const settingsPanel = document.getElementById('settingsPanel');
 const btnSettings = document.getElementById('btnSettings');
 btnSettings.addEventListener('click', () => {
   const isOpen = settingsPanel.style.display !== 'none';
+  closeAllPickers();
   settingsPanel.style.display = isOpen ? 'none' : 'block';
   btnSettings.classList.toggle('active', !isOpen);
 });
@@ -3436,6 +3450,7 @@ document.addEventListener('pointerdown', (e) => {
 
 // ===== URL-based auto-join =====
 if (urlRoomCode) {
+  const urlPw = new URLSearchParams(window.location.search).get('pw') || '';
   fetch('/api/session/' + urlRoomCode)
     .then(r => {
       if (!r.ok) throw new Error('not found');
@@ -3443,7 +3458,11 @@ if (urlRoomCode) {
     })
     .then(info => {
       document.getElementById('joinCode').value = urlRoomCode;
-      if (info.hasPassword) {
+      if (urlPw && info.hasPassword) {
+        // Auto-join with password from URL
+        document.getElementById('joinPassword').value = urlPw;
+        document.getElementById('btnJoin').click();
+      } else if (info.hasPassword) {
         document.getElementById('joinPassword').placeholder = 'Password required';
         document.getElementById('joinPassword').focus();
       }
@@ -3463,5 +3482,266 @@ window.addEventListener('popstate', () => {
     sessionCode = null;
     sessionPassword = null;
     hasJoinedSession = false;
+    tutorialTriggered = false;
+    if (tutorialActive) endTutorial();
+  }
+});
+
+// ===== Tutorial Walkthrough =====
+const tutorialSteps = [
+  {
+    target: 'promptSection',
+    label: 'Step 0',
+    title: 'Get a pose idea!',
+    desc: 'Tap Generate for a fun pose.',
+    position: 'right'
+  },
+  {
+    target: 'cameraSection',
+    label: 'Step 1',
+    title: 'Take your photo!',
+    desc: 'Hit the big button to snap.',
+    position: 'right'
+  },
+  {
+    target: 'rmbgSection',
+    label: 'Step 1b',
+    title: 'Remove your background',
+    desc: 'Not together? Erase your BG to join the same photo.',
+    position: 'right'
+  },
+  {
+    target: 'photoBankSidebar',
+    label: 'Step 2',
+    title: 'Drag photos to canvas',
+    desc: 'Your photos land here. Drag them into the frame!',
+    position: 'left'
+  },
+  {
+    target: 'decoDialSection',
+    label: 'Step 3',
+    title: 'Add stickers & text!',
+    desc: 'Drop emojis, stickers, or custom text onto your photo.',
+    position: 'right',
+    autoOpen: 'decoDialToggle'
+  },
+  {
+    target: 'customSection',
+    label: 'Step 3',
+    title: 'Customize your frame',
+    desc: 'Change background, border color, width, and more.',
+    position: 'left',
+    autoOpen: 'btnSettings'
+  },
+  {
+    target: ['layoutDropdown', 'ratioDropdown'],
+    label: 'Step 3',
+    title: 'Layout & ratio',
+    desc: 'Switch layout or aspect ratio anytime!',
+    position: 'bottom'
+  },
+  {
+    target: 'exportSidebar',
+    label: 'Step 4',
+    title: 'Export & share!',
+    desc: 'Done? Save your creation here.',
+    position: 'left'
+  }
+];
+
+let tutorialActive = false;
+let tutorialStep = 0;
+let tutorialSpotlight = null;
+let tutorialSpotlight2 = null;
+
+function startTutorial() {
+  tutorialActive = true;
+  tutorialStep = 0;
+  document.body.classList.add('tutorial-active');
+  const overlay = document.getElementById('tutorialOverlay');
+  overlay.style.display = 'block';
+
+  // Create spotlight element
+  if (!tutorialSpotlight) {
+    tutorialSpotlight = document.createElement('div');
+    tutorialSpotlight.className = 'tutorial-spotlight';
+    overlay.appendChild(tutorialSpotlight);
+  }
+  if (!tutorialSpotlight2) {
+    tutorialSpotlight2 = document.createElement('div');
+    tutorialSpotlight2.className = 'tutorial-spotlight';
+    tutorialSpotlight2.style.display = 'none';
+    overlay.appendChild(tutorialSpotlight2);
+  }
+
+  showTutorialStep();
+}
+
+function endTutorial() {
+  tutorialActive = false;
+  document.body.classList.remove('tutorial-active');
+  const overlay = document.getElementById('tutorialOverlay');
+  overlay.style.display = 'none';
+  if (tutorialSpotlight) tutorialSpotlight.style.display = 'none';
+  if (tutorialSpotlight2) tutorialSpotlight2.style.display = 'none';
+  // Close any panels that were opened during tutorial
+  closeAllPickers();
+}
+
+function positionTutorialSpotlightAndTooltip() {
+  const step = tutorialSteps[tutorialStep];
+  if (!step) return;
+
+  const targets = Array.isArray(step.target) ? step.target : [step.target];
+  const elements = targets.map(id => document.getElementById(id)).filter(Boolean);
+  if (elements.length === 0) return;
+
+  const pad = 8;
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  elements.forEach(el => {
+    const r = el.getBoundingClientRect();
+    minX = Math.min(minX, r.left);
+    minY = Math.min(minY, r.top);
+    maxX = Math.max(maxX, r.right);
+    maxY = Math.max(maxY, r.bottom);
+    // Also measure any visible absolute-positioned panels inside
+    el.querySelectorAll('.picker-panel, .deco-panel').forEach(panel => {
+      if (panel.style.display !== 'none' && panel.offsetParent !== null) {
+        const pr = panel.getBoundingClientRect();
+        minX = Math.min(minX, pr.left);
+        minY = Math.min(minY, pr.top);
+        maxX = Math.max(maxX, pr.right);
+        maxY = Math.max(maxY, pr.bottom);
+      }
+    });
+  });
+
+  tutorialSpotlight.style.display = 'block';
+  tutorialSpotlight.style.left = (minX - pad) + 'px';
+  tutorialSpotlight.style.top = (minY - pad) + 'px';
+  tutorialSpotlight.style.width = (maxX - minX + pad * 2) + 'px';
+  tutorialSpotlight.style.height = (maxY - minY + pad * 2) + 'px';
+  tutorialSpotlight2.style.display = 'none';
+
+  // Position tooltip
+  const tooltip = document.getElementById('tutorialTooltip');
+  const tipW = 360;
+  let tipX, tipY;
+  const pos = step.autoOpen ? 'below-panel' : step.position;
+
+  if (pos === 'below-panel') {
+    // Place tooltip below the entire spotlight (button + opened panel)
+    tipX = minX + (maxX - minX) / 2 - tipW / 2;
+    tipY = maxY + pad + 16;
+  } else if (pos === 'right') {
+    tipX = maxX + pad + 16;
+    tipY = minY;
+    if (tipX + tipW > window.innerWidth - 16) {
+      tipX = minX;
+      tipY = maxY + pad + 16;
+    }
+  } else if (pos === 'left') {
+    tipX = minX - pad - tipW - 16;
+    tipY = minY;
+    if (tipX < 16) {
+      tipX = minX;
+      tipY = maxY + pad + 16;
+    }
+  } else {
+    tipX = minX + (maxX - minX) / 2 - tipW / 2;
+    tipY = maxY + pad + 16;
+  }
+
+  tipX = Math.max(16, Math.min(tipX, window.innerWidth - tipW - 16));
+  tipY = Math.max(16, Math.min(tipY, window.innerHeight - 280));
+
+  tooltip.style.left = tipX + 'px';
+  tooltip.style.top = tipY + 'px';
+  tooltip.style.width = tipW + 'px';
+}
+
+function showTutorialStep() {
+  const step = tutorialSteps[tutorialStep];
+  if (!step) { endTutorial(); return; }
+
+  // Close any previously opened panels
+  closeAllPickers();
+
+  // Get target element(s)
+  const targets = Array.isArray(step.target) ? step.target : [step.target];
+  const elements = targets.map(id => document.getElementById(id)).filter(Boolean);
+  if (elements.length === 0) { tutorialStep++; showTutorialStep(); return; }
+
+  // Scroll element into view if needed
+  elements[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  // Initial position (before panel opens)
+  positionTutorialSpotlightAndTooltip();
+
+  // Auto-open a panel if needed, then reposition after it renders
+  if (step.autoOpen) {
+    setTimeout(() => {
+      const btn = document.getElementById(step.autoOpen);
+      if (btn) btn.click();
+      // Reposition after panel renders
+      setTimeout(() => positionTutorialSpotlightAndTooltip(), 50);
+    }, 150);
+  }
+
+  // Fill content
+  document.getElementById('tutorialStepLabel').textContent = step.label;
+  document.getElementById('tutorialTitle').textContent = step.title;
+  document.getElementById('tutorialDesc').textContent = step.desc;
+  document.getElementById('tutorialProgress').textContent = (tutorialStep + 1) + ' / ' + tutorialSteps.length;
+
+  // Back button visibility
+  document.getElementById('tutorialBack').style.display = tutorialStep === 0 ? 'none' : '';
+
+  // Next button text
+  const nextBtn = document.getElementById('tutorialNext');
+  nextBtn.textContent = tutorialStep === tutorialSteps.length - 1 ? 'Done' : 'Next';
+}
+
+// Tutorial button handlers
+document.getElementById('tutorialNext').addEventListener('click', () => {
+  if (tutorialStep >= tutorialSteps.length - 1) {
+    endTutorial();
+  } else {
+    tutorialStep++;
+    showTutorialStep();
+  }
+});
+document.getElementById('tutorialBack').addEventListener('click', () => {
+  if (tutorialStep > 0) {
+    tutorialStep--;
+    showTutorialStep();
+  }
+});
+document.getElementById('tutorialSkip').addEventListener('click', () => endTutorial());
+document.getElementById('tutorialBackdrop').addEventListener('click', () => endTutorial());
+
+// Keyboard: Enter = Next, Escape = Skip
+document.addEventListener('keydown', (e) => {
+  if (!tutorialActive) return;
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (tutorialStep >= tutorialSteps.length - 1) endTutorial();
+    else { tutorialStep++; showTutorialStep(); }
+  } else if (e.key === 'Escape') {
+    endTutorial();
+  }
+});
+
+// Reposition on resize
+window.addEventListener('resize', () => {
+  if (tutorialActive) positionTutorialSpotlightAndTooltip();
+});
+
+// Trigger tutorial after joining a session
+let tutorialTriggered = false;
+socket.on('user-joined', () => {
+  if (!tutorialTriggered) {
+    tutorialTriggered = true;
+    setTimeout(() => startTutorial(), 600);
   }
 });

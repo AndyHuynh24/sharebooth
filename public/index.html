@@ -138,28 +138,30 @@
       <!-- LEFT COLUMN: camera + controls + deco + export -->
       <div class="session-col-left">
 
-        <!-- Prompt area -->
-        <section class="prompt-section">
+        <!-- Prompt area — Step 0 -->
+        <section class="prompt-section" id="promptSection">
+          <div class="step-badge">Step 0</div>
           <h3 class="prompt-title">Need pose ideas?</h3>
-          <p class="prompt-subtitle">Pick a vibe and hit Generate!</p>
           <div class="prompt-categories">
             <button class="prompt-cat active" data-cat="mix">Mix</button>
             <button class="prompt-cat" data-cat="funny">Funny</button>
             <button class="prompt-cat" data-cat="chill">Chill</button>
             <button class="prompt-cat" data-cat="love">Love</button>
           </div>
-          <button id="btnRandomPrompt" class="btn btn-primary btn-sm">Generate Pose Prompt</button>
-          <div id="promptDisplay" class="prompt-display"></div>
-          <div class="prompt-action-row" id="promptActionRow" style="display:none">
-            <button id="btnStartPrompt" class="btn btn-start-prompt">Ready? Go!</button>
-            <button id="btnRedoPrompt" class="btn btn-redo-prompt">Try Another</button>
+          <div class="prompt-swap-zone" id="promptSwapZone">
+            <button id="btnRandomPrompt" class="btn btn-primary prompt-generate-btn">Generate Pose Idea</button>
+            <div id="promptResult" class="prompt-result" style="display:none">
+              <div id="promptDisplay" class="prompt-display"></div>
+              <button id="btnRedoPrompt" class="btn btn-redo-prompt">Try Another</button>
+            </div>
+            <div id="promptCountdown" class="prompt-countdown" style="display:none"></div>
+            <div id="promptFeedback" class="prompt-feedback" style="display:none"></div>
           </div>
-          <div id="promptCountdown" class="prompt-countdown" style="display:none"></div>
-          <div id="promptFeedback" class="prompt-feedback" style="display:none"></div>
         </section>
 
         <!-- Camera section -->
-        <section class="camera-section">
+        <section class="camera-section" id="cameraSection">
+          <div class="step-label"><span class="step-badge">Step 1</span> Snap a Photo</div>
           <div class="camera-wrapper">
             <video id="video" autoplay playsinline muted></video>
             <canvas id="livePreview" style="display:none"></canvas>
@@ -171,170 +173,177 @@
             </div>
           </div>
           <div class="camera-controls">
-            <label class="toggle-label">
-              <input type="checkbox" id="bgRemoveToggle" />
-              <span>Remove BG</span>
-            </label>
-            <div id="bgPresets" class="bg-presets" style="display:none">
-              <button class="bg-dot active" data-bg="#FFF6EB" style="background:#FFF6EB" title="Cream"></button>
-              <button class="bg-dot" data-bg="#C8FFE1" style="background:#C8FFE1" title="Mint"></button>
-              <button class="bg-dot" data-bg="#A0D8FF" style="background:#A0D8FF" title="Blue"></button>
-              <button class="bg-dot" data-bg="#B5A8D6" style="background:#B5A8D6" title="Purple"></button>
-              <button class="bg-dot" data-bg="transparent" title="None">&#10005;</button>
+            <section class="rmbg-section" id="rmbgSection">
+              <button id="bgRemoveToggleBtn" class="btn-rmbg-trigger">
+                <span class="rmbg-label-main">Remove BG</span>
+                <span class="rmbg-label-hint">Cut yourself out & join a friend's photo</span>
+              </button>
+              <div class="rmbg-panel" id="rmbgPanel" style="display:none">
+                <div class="rmbg-panel-content">
+                  <span class="rmbg-panel-title">Background Removal</span>
+                  <label class="toggle-label rmbg-toggle">
+                    <input type="checkbox" id="bgRemoveToggle" />
+                    <span>Enable</span>
+                  </label>
+                  <div class="rmbg-group">
+                    <span class="rmbg-group-label">BG Color</span>
+                    <div class="rmbg-color-row">
+                      <button class="bg-dot active" data-bg="#FFF6EB" style="background:#FFF6EB" title="Cream"></button>
+                      <button class="bg-dot" data-bg="transparent" title="None">&#10005;</button>
+                      <input type="color" id="bgColorCustom" class="fbg-color-rainbow" value="#FFF6EB" title="Custom color" />
+                    </div>
+                  </div>
+                  <div class="rmbg-group">
+                    <span class="rmbg-group-label">Virtual BG</span>
+                    <div class="rmbg-vbg-row">
+                      <button class="vbg-opt" data-vbg="none" title="Off">&#10005;</button>
+                      <input type="file" id="vbgUpload" accept="image/*" style="display:none" />
+                      <button class="vbg-opt vbg-upload-btn" title="Upload image">+</button>
+                    </div>
+                    <div id="vbgPhotos" class="vbg-photos"></div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+          <!-- SNAP + Stop camera buttons -->
+          <div class="snap-section">
+            <div class="camera-stop-wrapper">
+              <button id="btnStopCamera" class="btn btn-icon camera-stop-btn" title="Stop camera">&#9724;</button>
+              <span class="camera-stop-label">Pause</span>
             </div>
-          </div>
-          <!-- Virtual background presets (shown when BG removal is on) -->
-          <div id="virtualBgSection" class="virtual-bg-section" style="display:none">
-            <span class="virtual-bg-label">Virtual BG:</span>
-            <div class="virtual-bg-presets">
-              <button class="vbg-opt active" data-vbg="color:#FFF6EB" style="background:#FFF6EB" title="Cream"></button>
-              <button class="vbg-opt" data-vbg="color:#C8FFE1" style="background:#C8FFE1" title="Mint"></button>
-              <button class="vbg-opt" data-vbg="color:#A0D8FF" style="background:#A0D8FF" title="Blue"></button>
-              <button class="vbg-opt" data-vbg="color:#B5A8D6" style="background:#B5A8D6" title="Purple"></button>
-              <button class="vbg-opt" data-vbg="color:#222222" style="background:#222" title="Dark"></button>
-              <button class="vbg-opt" data-vbg="none" title="Off">&#10005;</button>
-              <input type="file" id="vbgUpload" accept="image/*" style="display:none" />
-              <button class="vbg-opt vbg-upload-btn" title="Upload image">+</button>
-            </div>
-            <div id="vbgPhotos" class="vbg-photos"></div>
-          </div>
-        </section>
-
-        <!-- SNAP + Stop camera buttons -->
-        <div class="snap-section">
-          <div class="camera-stop-wrapper">
-            <button id="btnStopCamera" class="btn btn-icon camera-stop-btn" title="Stop camera">&#9724;</button>
-            <span class="camera-stop-label">Pause</span>
-          </div>
-          <button id="snap" class="btn-snap" aria-label="Take photo">
-            <span class="snap-inner"></span>
-            <span class="snap-label">Capture</span>
-          </button>
-          <div class="timer-dropdown" id="timerDropdown">
-            <button class="btn-timer-trigger" id="btnTimerTrigger" title="Capture timer">
-              <span class="timer-icon">&#9201;</span>
-              <span class="timer-value" id="timerValue">Off</span>
+            <button id="snap" class="btn-snap" aria-label="Take photo">
+              <span class="snap-inner"></span>
+              <span class="snap-label">Capture</span>
             </button>
-            <div class="timer-panel" id="timerPanel" style="display:none">
-              <button class="timer-opt active" data-timer="0">Off</button>
-              <button class="timer-opt" data-timer="3">3s</button>
-              <button class="timer-opt" data-timer="5">5s</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Decoration tools -->
-        <section class="deco-section" id="decoDialSection">
-          <button id="decoDialToggle" class="btn-deco-trigger">
-            <span class="deco-trigger-icon">&#43;</span>
-            <span>Add Decoration</span>
-          </button>
-          <div class="deco-panel" id="decoDial" style="display:none">
-            <div class="deco-tools">
-              <button class="deco-tool" data-tool="sticker" title="Sticker">
-                <span class="deco-tool-icon">&#11088;</span>
-                <span class="deco-tool-label">Sticker</span>
+            <div class="timer-dropdown" id="timerDropdown">
+              <button class="btn-timer-trigger" id="btnTimerTrigger" title="Capture timer">
+                <span class="timer-icon">&#9201;</span>
+                <span class="timer-value" id="timerValue">Off</span>
               </button>
-              <button class="deco-tool" data-tool="text" title="Text">
-                <span class="deco-tool-icon">Aa</span>
-                <span class="deco-tool-label">Text</span>
-              </button>
-            </div>
-            <div id="stickerPickerArea" class="sticker-picker-area deco-subpanel" style="display:none">
-              <div class="sticker-tabs">
-                <button class="sticker-tab active" data-sticker-tab="emoji">Emoji</button>
-                <button class="sticker-tab" data-sticker-tab="hackher">HackHer</button>
-                <button class="sticker-tab" data-sticker-tab="vietnam">Vietnam</button>
-              </div>
-              <div class="sticker-tab-content" id="stickerTabEmoji">
-                <div class="emoji-picker">
-                  <span class="emoji-opt active">&#10084;&#65039;</span>
-                  <span class="emoji-opt">&#11088;</span>
-                  <span class="emoji-opt">&#128293;</span>
-                  <span class="emoji-opt">&#128514;</span>
-                  <span class="emoji-opt">&#10024;</span>
-                  <span class="emoji-opt">&#128077;</span>
-                  <span class="emoji-opt">&#128081;</span>
-                  <span class="emoji-opt">&#127752;</span>
-                  <span class="emoji-opt">&#127881;</span>
-                  <span class="emoji-opt">&#129395;</span>
-                  <span class="emoji-opt">&#128150;</span>
-                  <span class="emoji-opt">&#127775;</span>
-                </div>
-              </div>
-              <div class="sticker-tab-content" id="stickerTabHackher" style="display:none">
-                <div class="image-sticker-grid">
-                  <img class="img-sticker-opt" src="/assets/stickers/hackher/battery.png" data-sticker-src="/assets/stickers/hackher/battery.png" alt="Battery" />
-                  <img class="img-sticker-opt" src="/assets/stickers/hackher/camera.png" data-sticker-src="/assets/stickers/hackher/camera.png" alt="Camera" />
-                  <img class="img-sticker-opt" src="/assets/stickers/hackher/chatbox.png" data-sticker-src="/assets/stickers/hackher/chatbox.png" alt="Chatbox" />
-                  <img class="img-sticker-opt" src="/assets/stickers/hackher/game.png" data-sticker-src="/assets/stickers/hackher/game.png" alt="Game" />
-                  <img class="img-sticker-opt" src="/assets/stickers/hackher/game2.png" data-sticker-src="/assets/stickers/hackher/game2.png" alt="Game 2" />
-                  <img class="img-sticker-opt" src="/assets/stickers/hackher/phone.png" data-sticker-src="/assets/stickers/hackher/phone.png" alt="Phone" />
-                  <img class="img-sticker-opt" src="/assets/stickers/hackher/treasure.png" data-sticker-src="/assets/stickers/hackher/treasure.png" alt="Treasure" />
-                  <img class="img-sticker-opt" src="/assets/stickers/hackher/tree.png" data-sticker-src="/assets/stickers/hackher/tree.png" alt="Tree" />
-                </div>
-              </div>
-              <div class="sticker-tab-content" id="stickerTabVietnam" style="display:none">
-                <div class="image-sticker-grid">
-                  <img class="img-sticker-opt" src="/assets/stickers/vietnam/1.png" data-sticker-src="/assets/stickers/vietnam/1.png" alt="Vietnam 1" />
-                  <img class="img-sticker-opt" src="/assets/stickers/vietnam/2.png" data-sticker-src="/assets/stickers/vietnam/2.png" alt="Vietnam 2" />
-                  <img class="img-sticker-opt" src="/assets/stickers/vietnam/4.png" data-sticker-src="/assets/stickers/vietnam/4.png" alt="Vietnam 3" />
-                  <img class="img-sticker-opt" src="/assets/stickers/vietnam/5.png" data-sticker-src="/assets/stickers/vietnam/5.png" alt="Vietnam 4" />
-                </div>
+              <div class="timer-panel" id="timerPanel" style="display:none">
+                <button class="timer-opt active" data-timer="0">Off</button>
+                <button class="timer-opt" data-timer="3">3s</button>
+                <button class="timer-opt" data-timer="5">5s</button>
               </div>
             </div>
           </div>
         </section>
 
-        <!-- More Customization (inline panel pops right) -->
-        <section class="custom-section" id="customSection">
-          <button id="btnSettings" class="btn-custom-trigger">
-            <span class="custom-trigger-icon">&#9881;</span>
-            <span>More Customization</span>
-          </button>
-          <div class="custom-panel" id="settingsPanel" style="display:none">
-            <div class="custom-panel-content">
-              <div class="settings-group">
-                <span class="settings-group-label">Frame Border</span>
-                <label class="frame-slider-label">
-                  Width
-                  <input type="range" id="frameBorderWidth" min="0" max="5" value="4" class="frame-slider" />
-                </label>
-                <label class="frame-slider-label">
-                  Radius
-                  <input type="range" id="frameBorderRadius" min="0" max="50" value="4" class="frame-slider" />
-                </label>
-                <label class="frame-slider-label">
-                  Color
-                  <input type="color" id="frameBorderColorPicker" value="#ffffff" class="fbg-color-picker" />
-                </label>
-              </div>
-              <div class="settings-group" id="bgScaleGroup" style="display:none">
-                <span class="settings-group-label">Background Size</span>
-                <label class="frame-slider-label">
-                  Tile Scale
-                  <input type="range" id="frameBgScaleSlider" min="5" max="100" value="25" class="frame-slider" />
-                </label>
-              </div>
-              <div class="settings-group">
-                <span class="settings-group-label">Add to Canvas</span>
-                <button id="btnAddDate" class="btn btn-secondary btn-sm">Add Date</button>
-                <button id="btnAddNames" class="btn btn-secondary btn-sm">Add Names</button>
-              </div>
-            </div>
-          </div>
-        </section>
 
       </div>
 
       <!-- RIGHT COLUMN: frame + canvas only -->
       <div class="session-col-right">
 
-        <!-- Main canvas area -->
-        <div class="right-main">
-
-          <!-- Layout & Ratio pickers above canvas -->
+          <!-- Step 3: Decorations, Customize, Layout & Ratio pickers above canvas -->
           <div class="canvas-pickers">
+            <span class="step-badge">Step 3</span>
+            <div class="picker-dropdown" id="decoDialSection">
+              <button class="picker-trigger" id="decoDialToggle">Add Decorations</button>
+              <div class="picker-panel deco-panel" id="decoDial" style="display:none">
+                <div class="deco-tools">
+                  <button class="deco-tool" data-tool="sticker" title="Sticker">
+                    <span class="deco-tool-icon">&#11088;</span>
+                    <span class="deco-tool-label">Sticker</span>
+                  </button>
+                  <button class="deco-tool" data-tool="text" title="Text">
+                    <span class="deco-tool-icon">Aa</span>
+                    <span class="deco-tool-label">Text</span>
+                  </button>
+                </div>
+                <div id="stickerPickerArea" class="sticker-picker-area deco-subpanel" style="display:none">
+                  <div class="sticker-tabs">
+                    <button class="sticker-tab active" data-sticker-tab="emoji">Emoji</button>
+                    <button class="sticker-tab" data-sticker-tab="hackher">HackHer</button>
+                    <button class="sticker-tab" data-sticker-tab="vietnam">Vietnam</button>
+                  </div>
+                  <div class="sticker-tab-content" id="stickerTabEmoji">
+                    <div class="emoji-picker">
+                      <span class="emoji-opt active">&#10084;&#65039;</span>
+                      <span class="emoji-opt">&#11088;</span>
+                      <span class="emoji-opt">&#128293;</span>
+                      <span class="emoji-opt">&#128514;</span>
+                      <span class="emoji-opt">&#10024;</span>
+                      <span class="emoji-opt">&#128077;</span>
+                      <span class="emoji-opt">&#128081;</span>
+                      <span class="emoji-opt">&#127752;</span>
+                      <span class="emoji-opt">&#127881;</span>
+                      <span class="emoji-opt">&#129395;</span>
+                      <span class="emoji-opt">&#128150;</span>
+                      <span class="emoji-opt">&#127775;</span>
+                    </div>
+                  </div>
+                  <div class="sticker-tab-content" id="stickerTabHackher" style="display:none">
+                    <div class="image-sticker-grid">
+                      <img class="img-sticker-opt" src="/assets/stickers/hackher/battery.png" data-sticker-src="/assets/stickers/hackher/battery.png" alt="Battery" />
+                      <img class="img-sticker-opt" src="/assets/stickers/hackher/camera.png" data-sticker-src="/assets/stickers/hackher/camera.png" alt="Camera" />
+                      <img class="img-sticker-opt" src="/assets/stickers/hackher/chatbox.png" data-sticker-src="/assets/stickers/hackher/chatbox.png" alt="Chatbox" />
+                      <img class="img-sticker-opt" src="/assets/stickers/hackher/game.png" data-sticker-src="/assets/stickers/hackher/game.png" alt="Game" />
+                      <img class="img-sticker-opt" src="/assets/stickers/hackher/game2.png" data-sticker-src="/assets/stickers/hackher/game2.png" alt="Game 2" />
+                      <img class="img-sticker-opt" src="/assets/stickers/hackher/phone.png" data-sticker-src="/assets/stickers/hackher/phone.png" alt="Phone" />
+                      <img class="img-sticker-opt" src="/assets/stickers/hackher/treasure.png" data-sticker-src="/assets/stickers/hackher/treasure.png" alt="Treasure" />
+                      <img class="img-sticker-opt" src="/assets/stickers/hackher/tree.png" data-sticker-src="/assets/stickers/hackher/tree.png" alt="Tree" />
+                    </div>
+                  </div>
+                  <div class="sticker-tab-content" id="stickerTabVietnam" style="display:none">
+                    <div class="image-sticker-grid">
+                      <img class="img-sticker-opt" src="/assets/stickers/vietnam/1.png" data-sticker-src="/assets/stickers/vietnam/1.png" alt="Vietnam 1" />
+                      <img class="img-sticker-opt" src="/assets/stickers/vietnam/2.png" data-sticker-src="/assets/stickers/vietnam/2.png" alt="Vietnam 2" />
+                      <img class="img-sticker-opt" src="/assets/stickers/vietnam/4.png" data-sticker-src="/assets/stickers/vietnam/4.png" alt="Vietnam 3" />
+                      <img class="img-sticker-opt" src="/assets/stickers/vietnam/5.png" data-sticker-src="/assets/stickers/vietnam/5.png" alt="Vietnam 4" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="picker-dropdown custom-section" id="customSection">
+              <button class="picker-trigger" id="btnSettings">Customize Frame</button>
+              <div class="picker-panel custom-panel" id="settingsPanel" style="display:none">
+                <div class="custom-panel-content">
+                  <div class="settings-group">
+                    <span class="settings-group-label">Background</span>
+                    <div class="frame-bg-options">
+                      <button class="fbg-opt" data-fbg="color:#FFF6EB" style="background:#FFF6EB" title="Cream"></button>
+                      <button class="fbg-opt" data-fbg="color:#FFFFFF" style="background:#FFF;border:1px solid #ddd" title="White"></button>
+                      <button class="fbg-opt" data-fbg="color:#B5A8D6" style="background:#B5A8D6" title="Light Purple"></button>
+                      <button class="fbg-opt active" data-fbg="color:#8070B6" style="background:#8070B6" title="Purple"></button>
+                      <button class="fbg-opt" data-fbg="color:#222222" style="background:#222" title="Dark"></button>
+                      <input type="color" id="fbgColorPicker" class="fbg-color-rainbow" value="#8070B6" title="Custom color" />
+                      <input type="file" id="fbgImageUpload" accept="image/*" style="display:none" />
+                      <button class="fbg-opt fbg-upload-btn" title="Upload background image">&#128247;</button>
+                    </div>
+                  </div>
+                  <div class="settings-group">
+                    <span class="settings-group-label">Frame Border</span>
+                    <label class="frame-slider-label">
+                      Width
+                      <input type="range" id="frameBorderWidth" min="0" max="5" value="4" class="frame-slider" />
+                    </label>
+                    <label class="frame-slider-label">
+                      Radius
+                      <input type="range" id="frameBorderRadius" min="0" max="50" value="4" class="frame-slider" />
+                    </label>
+                    <label class="frame-slider-label">
+                      Image Border Color
+                      <input type="color" id="frameBorderColorPicker" value="#ffffff" class="fbg-color-picker" />
+                    </label>
+                  </div>
+                  <div class="settings-group" id="bgScaleGroup" style="display:none">
+                    <span class="settings-group-label">Background Size</span>
+                    <label class="frame-slider-label">
+                      Tile Scale
+                      <input type="range" id="frameBgScaleSlider" min="5" max="100" value="25" class="frame-slider" />
+                    </label>
+                  </div>
+                  <div class="settings-group">
+                    <span class="settings-group-label">Add to Canvas</span>
+                    <button id="btnAddDate" class="btn btn-secondary btn-sm">Add Date</button>
+                    <button id="btnAddNames" class="btn btn-secondary btn-sm">Add Names</button>
+                  </div>
+                </div>
+              </div>
+            </div>
             <div class="picker-dropdown" id="layoutDropdown">
               <button class="picker-trigger" id="btnLayoutTrigger">Change Layout</button>
               <div class="picker-panel" id="layoutPanel" style="display:none">
@@ -378,22 +387,11 @@
                 </div>
               </div>
             </div>
-            <div class="picker-dropdown" id="bgDropdown">
-              <button class="picker-trigger" id="btnBgTrigger">Change Background</button>
-              <div class="picker-panel" id="bgPanel" style="display:none">
-                <div class="frame-bg-options">
-                  <button class="fbg-opt" data-fbg="color:#FFF6EB" style="background:#FFF6EB" title="Cream"></button>
-                  <button class="fbg-opt" data-fbg="color:#FFFFFF" style="background:#FFF;border:1px solid #ddd" title="White"></button>
-                  <button class="fbg-opt" data-fbg="color:#B5A8D6" style="background:#B5A8D6" title="Light Purple"></button>
-                  <button class="fbg-opt active" data-fbg="color:#8070B6" style="background:#8070B6" title="Purple"></button>
-                  <button class="fbg-opt" data-fbg="color:#222222" style="background:#222" title="Dark"></button>
-                  <input type="color" id="fbgColorPicker" class="fbg-color-rainbow" value="#8070B6" title="Custom color" />
-                  <input type="file" id="fbgImageUpload" accept="image/*" style="display:none" />
-                  <button class="fbg-opt fbg-upload-btn" title="Upload background image">&#128247;</button>
-                </div>
-              </div>
-            </div>
           </div>
+
+        <div class="right-content">
+        <!-- Main canvas area -->
+        <div class="right-main">
 
           <!-- Canvas preview -->
           <section class="canvas-section">
@@ -448,23 +446,40 @@
 
         <!-- Right sidebar: Photo Bank + Export -->
         <aside class="right-sidebar">
-          <div class="photo-bank-sidebar">
+          <div class="photo-bank-sidebar" id="photoBankSidebar">
             <div class="bank-header">
-              <span class="bank-label">Photo Bank</span>
+              <span class="bank-label"><span class="step-badge">Step 2</span><br>Drag Photos to Canvas</span>
               <span id="photoCounter" class="photo-counter"></span>
             </div>
             <div id="thumbs" class="thumbs-row"></div>
           </div>
-          <div class="export-sidebar">
-            <button id="finish" class="btn btn-primary btn-finish-main">Finish? Click Here</button>
+          <div class="export-sidebar" id="exportSidebar">
+            <button id="finish" class="btn btn-primary btn-finish-main"><span class="step-badge step-badge-on-purple">Step 4</span><br>Export &amp; Share</button>
             <div id="shareArea" class="share-area"></div>
           </div>
         </aside>
+        </div><!-- .right-content -->
 
       </div>
     </div>
 
 
+
+    <!-- Tutorial Walkthrough Overlay -->
+    <div id="tutorialOverlay" class="tutorial-overlay" style="display:none">
+      <div class="tutorial-backdrop" id="tutorialBackdrop"></div>
+      <div class="tutorial-tooltip" id="tutorialTooltip">
+        <div class="tutorial-tooltip-step" id="tutorialStepLabel"></div>
+        <div class="tutorial-tooltip-title" id="tutorialTitle"></div>
+        <div class="tutorial-tooltip-desc" id="tutorialDesc"></div>
+        <div class="tutorial-tooltip-actions">
+          <button id="tutorialBack" class="tutorial-btn tutorial-btn-back">Back</button>
+          <span class="tutorial-progress" id="tutorialProgress"></span>
+          <button id="tutorialNext" class="tutorial-btn tutorial-btn-next">Next</button>
+        </div>
+        <button id="tutorialSkip" class="tutorial-skip-btn">Skip Tutorial</button>
+      </div>
+    </div>
 
     <!-- Export format modal -->
     <div id="exportModal" class="export-modal-overlay" style="display:none">
