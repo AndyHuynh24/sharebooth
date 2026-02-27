@@ -1189,21 +1189,6 @@ async function render(time = 0) {
     if (frameBgMode === 'cover') {
       // Stretch to cover canvas
       drawImageCover(ctx, frameBgImage, 0, 0, cw, ch);
-    } else if (frameBgMode === 'fit') {
-      // Scale to fit: contain within canvas, centered, with bg color fill
-      ctx.fillStyle = frameBgColor;
-      ctx.fillRect(0, 0, cw, ch);
-      const imgAspect = frameBgImage.naturalWidth / frameBgImage.naturalHeight || 1;
-      const canvasAspect = cw / ch;
-      let dw, dh;
-      if (imgAspect > canvasAspect) {
-        dw = cw; dh = cw / imgAspect;
-      } else {
-        dh = ch; dw = ch * imgAspect;
-      }
-      const dx = (cw - dw) / 2;
-      const dy = (ch - dh) / 2;
-      ctx.drawImage(frameBgImage, dx, dy, dw, dh);
     } else {
       // Tiled/repeated background based on frameBgScale
       const tileW = Math.max(10, cw * frameBgScale);
