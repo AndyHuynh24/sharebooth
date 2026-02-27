@@ -431,7 +431,7 @@ function renderPhotoBank() {
     if (!isLayerPending) {
       const unassign = document.createElement('button');
       unassign.className = 'thumb-delete-btn';
-      unassign.textContent = '\u21A9';
+      unassign.innerHTML = '<i class="bx bx-undo"></i>';
       unassign.title = 'Remove from frame';
       unassign.onclick = ((idx) => (e) => {
         e.stopPropagation();
@@ -483,8 +483,8 @@ function renderPhotoBank() {
     // Delete button (only for confirmed photos)
     if (!isPending) {
       const del = document.createElement('button');
-      del.className = 'thumb-delete-btn';
-      del.textContent = '\u00D7';
+      del.className = 'thumb-delete-btn thumb-delete-btn--red';
+      del.innerHTML = '<i class="bx bx-trash"></i>';
       del.title = 'Delete photo';
       del.onclick = ((idx) => (e) => {
         e.stopPropagation();
@@ -716,8 +716,8 @@ async function detectFaces(imageSource) {
 }
 
 function computeCutoutPlacement(bgW, bgH, bgFaces, cutW, cutH, cutFaces) {
-  const defaultScale = 0.65;
-  const defaultResult = { x: bgW * 0.4, y: bgH - (cutH * defaultScale), scale: defaultScale };
+  const defaultScale = 0.85;
+  const defaultResult = { x: bgW * 0.15, y: bgH - (cutH * defaultScale), scale: defaultScale };
   if (bgFaces.length === 0) return defaultResult;
 
   // Use the largest background face
@@ -1843,6 +1843,7 @@ function positionFloatingTextEdit() {
   document.getElementById('decoTextBgToggle').checked = !!d.showBg;
 }
 
+floatingDecoDelete.addEventListener('pointerdown', (e) => e.stopPropagation());
 floatingDecoDelete.addEventListener('click', (e) => {
   e.stopPropagation();
   deleteSelectedDeco();
@@ -3632,9 +3633,13 @@ function positionFloatingShapePicker(idx) {
   floatingShapePicker.style.top = Math.max(0, topY - pickerH - 4) + 'px';
 }
 
+// Prevent floating shape picker from propagating events (avoids deselection)
+floatingShapePicker.addEventListener('pointerdown', (e) => e.stopPropagation());
+
 // Frame shape controls
 document.querySelectorAll('.fshape-opt').forEach(btn => {
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
     document.querySelectorAll('.fshape-opt').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     const shape = btn.dataset.shape;
@@ -3652,7 +3657,8 @@ document.querySelectorAll('.fshape-opt').forEach(btn => {
 });
 
 // Remove photo from canvas (back to bank)
-document.getElementById('btnRemoveFromCanvas').addEventListener('click', () => {
+document.getElementById('btnRemoveFromCanvas').addEventListener('click', (e) => {
+  e.stopPropagation();
   if (selectedPhotoIndex >= 0 && layers[selectedPhotoIndex]) {
     unassignFromSlot(selectedPhotoIndex);
   }
@@ -3700,7 +3706,7 @@ document.querySelectorAll('.fbg-opt').forEach(btn => {
       frameBgImage = null;
       updateBgScaleVisibility();
       render();
-      if (sessionCode) socket.emit('frame-bg-change', { code: sessionCode, bgType: 'color', bgColor: frameBgColor });
+      if (sessionCode) socket.emit('frame-bg-change', { code: sessionCode, bgType: 'color', bgColor: frameBgColor, bgMode: frameBgMode, bgScale: frameBgScale });
     } else if (val.startsWith('image:')) {
       const src = val.replace('image:', '');
       const img = new Image();
@@ -3709,7 +3715,7 @@ document.querySelectorAll('.fbg-opt').forEach(btn => {
         frameBgType = 'image';
         updateBgScaleVisibility();
         render();
-        if (sessionCode) socket.emit('frame-bg-change', { code: sessionCode, bgType: 'image', bgImageUrl: src });
+        if (sessionCode) socket.emit('frame-bg-change', { code: sessionCode, bgType: 'image', bgImageUrl: src, bgMode: frameBgMode, bgScale: frameBgScale });
       };
       img.src = src;
     }
@@ -3724,7 +3730,7 @@ document.getElementById('fbgColorPicker').addEventListener('input', e => {
   document.querySelectorAll('.fbg-opt').forEach(b => b.classList.remove('active'));
   updateBgScaleVisibility();
   render();
-  if (sessionCode) socket.emit('frame-bg-change', { code: sessionCode, bgType: 'color', bgColor: frameBgColor });
+  if (sessionCode) socket.emit('frame-bg-change', { code: sessionCode, bgType: 'color', bgColor: frameBgColor, bgMode: frameBgMode, bgScale: frameBgScale });
 });
 
 // Show/hide background scale slider based on bg type
@@ -3750,6 +3756,7 @@ document.querySelectorAll('.fbg-mode-btn').forEach(btn => {
     frameBgMode = btn.dataset.bgmode;
     updateBgScaleVisibility();
     render();
+    if (sessionCode) socket.emit('frame-bg-change', { code: sessionCode, bgType: frameBgType, bgColor: frameBgColor, bgMode: frameBgMode, bgScale: frameBgScale });
   });
 });
 
@@ -3757,7 +3764,22 @@ document.querySelectorAll('.fbg-mode-btn').forEach(btn => {
 document.getElementById('frameBgScaleSlider').addEventListener('input', e => {
   frameBgScale = parseInt(e.target.value, 10) / 100;
   render();
+  if (sessionCode) socket.emit('frame-bg-change', { code: sessionCode, bgType: frameBgType, bgColor: frameBgColor, bgMode: frameBgMode, bgScale: frameBgScale });
 });
+
+// Resize image to max dimension and return base64 JPEG (keeps socket payload small)
+function resizeImageForSync(img, maxDim) {
+  let w = img.naturalWidth || img.width;
+  let h = img.naturalHeight || img.height;
+  if (w > maxDim || h > maxDim) {
+    if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+    else { w = Math.round(w * maxDim / h); h = maxDim; }
+  }
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  c.getContext('2d').drawImage(img, 0, 0, w, h);
+  return c.toDataURL('image/jpeg', 0.75);
+}
 
 // Frame BG image upload
 document.querySelector('.fbg-upload-btn').addEventListener('click', () => {
@@ -3776,7 +3798,10 @@ document.getElementById('fbgImageUpload').addEventListener('change', e => {
       document.querySelector('.fbg-upload-btn').classList.add('active');
       updateBgScaleVisibility();
       render();
-      if (sessionCode) socket.emit('frame-bg-change', { code: sessionCode, bgType: 'image', bgImageUrl: reader.result });
+      if (sessionCode) {
+        const resized = resizeImageForSync(img, 1200);
+        socket.emit('frame-bg-change', { code: sessionCode, bgType: 'image', bgImageUrl: resized, bgMode: frameBgMode, bgScale: frameBgScale });
+      }
     };
     img.src = reader.result;
   };
@@ -3784,7 +3809,17 @@ document.getElementById('fbgImageUpload').addEventListener('change', e => {
 });
 
 // Frame BG socket events
-function applyFrameBgFromSocket({ bgType, bgColor, bgImageUrl }) {
+function applyFrameBgFromSocket({ bgType, bgColor, bgImageUrl, bgMode, bgScale }) {
+  // Sync mode and scale if provided
+  if (bgMode) {
+    frameBgMode = bgMode;
+    document.querySelectorAll('.fbg-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.bgmode === bgMode));
+  }
+  if (bgScale !== undefined && bgScale !== null) {
+    frameBgScale = bgScale;
+    const slider = document.getElementById('frameBgScaleSlider');
+    if (slider) slider.value = String(Math.round(bgScale * 100));
+  }
   if (bgType === 'color' && bgColor) {
     frameBgType = 'color';
     frameBgColor = bgColor;
@@ -3799,7 +3834,6 @@ function applyFrameBgFromSocket({ bgType, bgColor, bgImageUrl }) {
     img.onload = () => {
       frameBgImage = img;
       frameBgType = 'image';
-      // Update UI — highlight matching preset or upload button
       document.querySelectorAll('.fbg-opt').forEach(b => {
         b.classList.toggle('active', b.dataset.fbg === 'image:' + bgImageUrl);
       });
@@ -3913,9 +3947,11 @@ decoCanvas.addEventListener('dblclick', (e) => {
 
 // Click outside canvas to deselect photos and exit crop mode
 document.addEventListener('pointerdown', (e) => {
-  // Check if click is inside the canvas area or floating toolbars
+  // Check if click is inside the canvas area or any floating toolbar
   const preview = document.getElementById('preview');
   if (preview && preview.contains(e.target)) return;
+  // Guard: any click inside .canvas-section's floating toolbars must not deselect
+  if (e.target.closest('.floating-shape-picker, .floating-deco-delete, .floating-text-edit')) return;
   if (floatingShapePicker && floatingShapePicker.contains(e.target)) return;
   if (floatingDecoDelete && floatingDecoDelete.contains(e.target)) return;
   if (floatingTextEdit && floatingTextEdit.contains(e.target)) return;

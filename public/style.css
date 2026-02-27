@@ -1521,7 +1521,7 @@ body.tutorial-active .canvas-pickers {
   height: 30px;
   border-radius: var(--radius-full);
   border: 2px solid var(--white);
-  background: var(--heart);
+  background: #E53935;
   color: var(--white);
   font-size: 14px;
   cursor: pointer;
@@ -1535,7 +1535,7 @@ body.tutorial-active .canvas-pickers {
   padding: 0;
 }
 .floating-deco-delete:hover {
-  background: #6E5FA5;
+  background: #C62828;
   transform: scale(1.15);
 }
 
@@ -1615,8 +1615,8 @@ body.tutorial-active .canvas-pickers {
   width: 28px;
   height: 28px;
   border-radius: var(--radius-sm);
-  border: 2px solid var(--heart);
-  background: var(--heart);
+  border: 2px solid #E53935;
+  background: #E53935;
   color: var(--white);
   cursor: pointer;
   display: flex;
@@ -1628,7 +1628,7 @@ body.tutorial-active .canvas-pickers {
   transition: background 0.12s, transform 0.12s;
 }
 .fshape-remove-btn:hover {
-  background: #6E5FA5;
+  background: #C62828;
   transform: scale(1.1);
 }
 
@@ -1908,7 +1908,7 @@ body.tutorial-active .canvas-pickers {
   border: 2px solid var(--white);
   background: var(--heart);
   color: #fff;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
@@ -1920,7 +1920,12 @@ body.tutorial-active .canvas-pickers {
   box-shadow: 0 1px 4px rgba(0,0,0,0.2);
   transition: transform 0.12s, background 0.12s;
 }
+.thumb-delete-btn--red {
+  background: #E53935;
+  border-color: var(--white);
+}
 .thumb-delete-btn:hover { background: #6E5FA5; transform: scale(1.15); }
+.thumb-delete-btn--red:hover { background: #C62828; }
 
 /* Corner marker for assigned frame photos */
 .thumb-frame-marker {

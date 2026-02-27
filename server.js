@@ -108,7 +108,7 @@ io.on('connection', socket => {
     }
     socket.emit('layout-sync', { layout: sessions[code].layout });
     const fb = sessions[code].frameBg;
-    socket.emit('frame-bg-sync', { bgType: fb.type, bgColor: fb.color, bgImageUrl: fb.imageUrl });
+    socket.emit('frame-bg-sync', { bgType: fb.type, bgColor: fb.color, bgImageUrl: fb.imageUrl, bgMode: fb.mode, bgScale: fb.scale });
     if (sessions[code].frameBorder) {
       socket.emit('frame-border-change', sessions[code].frameBorder);
     }
@@ -199,10 +199,10 @@ io.on('connection', socket => {
   });
 
   // Frame background
-  socket.on('frame-bg-change', ({ code, bgType, bgColor, bgImageUrl }) => {
+  socket.on('frame-bg-change', ({ code, bgType, bgColor, bgImageUrl, bgMode, bgScale }) => {
     if (!sessions[code]) return;
-    sessions[code].frameBg = { type: bgType, color: bgColor, imageUrl: bgImageUrl };
-    socket.to(code).emit('frame-bg-change', { bgType, bgColor, bgImageUrl });
+    sessions[code].frameBg = { type: bgType, color: bgColor, imageUrl: bgImageUrl, mode: bgMode, scale: bgScale };
+    socket.to(code).emit('frame-bg-change', { bgType, bgColor, bgImageUrl, bgMode, bgScale });
   });
 
   // Frame border sync

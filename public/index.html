@@ -5,6 +5,7 @@
   <title>Sharebooth</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+  <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -220,7 +221,7 @@
                 <span class="camera-stop-label">Pause</span>
               </div>
               <div class="camera-stop-wrapper">
-                <button id="btnImportPhoto" class="btn btn-icon camera-stop-btn" title="Import photo">&#128206;</button>
+                <button id="btnImportPhoto" class="btn btn-icon camera-stop-btn" title="Import photo"><i class="bx bx-import"></i></button>
                 <span class="camera-stop-label">Import</span>
               </div>
               <input type="file" id="importPhotoInput" accept="image/*" multiple style="display:none" />
@@ -427,7 +428,7 @@
             <canvas id="decoCanvas"></canvas>
           </div>
           <!-- Floating UI elements (outside canvas-preview to avoid overflow:hidden clipping) -->
-          <button id="floatingDecoDelete" class="floating-deco-delete" style="display:none" title="Delete decoration">&#128465;</button>
+          <button id="floatingDecoDelete" class="floating-deco-delete" style="display:none" title="Delete decoration"><i class="bx bx-trash"></i></button>
           <div id="floatingShapePicker" class="floating-shape-picker" style="display:none">
             <button class="fshape-opt active" data-shape="rounded" title="Rounded">&#9646;</button>
             <button class="fshape-opt" data-shape="circle" title="Circle">&#9679;</button>
@@ -435,7 +436,7 @@
             <button class="fshape-opt" data-shape="heart" title="Heart">&#10084;</button>
             <button class="fshape-opt" data-shape="star" title="Star">&#9733;</button>
             <button class="fshape-opt" data-shape="cloud" title="Cloud">&#9729;</button>
-            <button class="fshape-remove-btn" id="btnRemoveFromCanvas" title="Remove from canvas">&#128465;</button>
+            <button class="fshape-remove-btn" id="btnRemoveFromCanvas" title="Remove from canvas"><i class="bx bx-trash"></i></button>
           </div>
           <!-- Floating text edit toolbar -->
           <div id="floatingTextEdit" class="floating-text-edit" style="display:none">
