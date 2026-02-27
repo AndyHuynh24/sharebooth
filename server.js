@@ -11,7 +11,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   transports: ['websocket'],
   allowUpgrades: false,
-  maxHttpBufferSize: 5e6 // 5MB — enough for base64 image data
+  maxHttpBufferSize: 10e6 // 10MB — enough for base64 image data
 });
 
 app.use(cors());
@@ -207,6 +207,7 @@ io.on('connection', socket => {
     if (bgImageUrl !== undefined) fb.imageUrl = bgImageUrl;
     if (bgMode !== undefined) fb.mode = bgMode;
     if (bgScale !== undefined) fb.scale = bgScale;
+    console.log(code, 'frame-bg-change', 'type=' + fb.type, 'hasImageUrl=' + !!fb.imageUrl, 'imageUrlLen=' + (fb.imageUrl ? fb.imageUrl.length : 0));
     socket.to(code).emit('frame-bg-change', { bgType: fb.type, bgColor: fb.color, bgImageUrl: fb.imageUrl, bgMode: fb.mode, bgScale: fb.scale });
   });
 

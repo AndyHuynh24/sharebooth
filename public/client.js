@@ -3718,7 +3718,10 @@ document.querySelectorAll('.fbg-opt').forEach(btn => {
         frameBgType = 'image';
         updateBgScaleVisibility();
         render();
-        if (sessionCode) socket.emit('frame-bg-change', { code: sessionCode, bgType: 'image', bgImageUrl: src, bgMode: frameBgMode, bgScale: frameBgScale });
+        if (sessionCode) {
+          console.log('[BG EMIT] preset image:', src);
+          socket.emit('frame-bg-change', { code: sessionCode, bgType: 'image', bgImageUrl: src, bgMode: frameBgMode, bgScale: frameBgScale });
+        }
       };
       img.src = src;
     }
@@ -3805,6 +3808,7 @@ document.getElementById('fbgImageUpload').addEventListener('change', e => {
       updateBgScaleVisibility();
       render();
       if (sessionCode) {
+        console.log('[BG EMIT] uploaded image, resized len:', resized.length);
         socket.emit('frame-bg-change', { code: sessionCode, bgType: 'image', bgImageUrl: resized, bgMode: frameBgMode, bgScale: frameBgScale });
       }
     };
@@ -3815,6 +3819,7 @@ document.getElementById('fbgImageUpload').addEventListener('change', e => {
 
 // Frame BG socket events
 function applyFrameBgFromSocket({ bgType, bgColor, bgImageUrl, bgMode, bgScale }) {
+  console.log('[BG SYNC] received:', bgType, 'hasImageUrl:', !!bgImageUrl, 'urlLen:', bgImageUrl ? bgImageUrl.length : 0);
   // Sync mode and scale if provided
   if (bgMode) {
     frameBgMode = bgMode;
@@ -3838,6 +3843,7 @@ function applyFrameBgFromSocket({ bgType, bgColor, bgImageUrl, bgMode, bgScale }
   } else if (bgType === 'image' && bgImageUrl) {
     const img = new Image();
     img.onload = () => {
+      console.log('[BG SYNC] image loaded OK, applying');
       frameBgImage = img;
       frameBgImageUrl = bgImageUrl;
       frameBgType = 'image';
@@ -3846,6 +3852,9 @@ function applyFrameBgFromSocket({ bgType, bgColor, bgImageUrl, bgMode, bgScale }
       });
       updateBgScaleVisibility();
       render();
+    };
+    img.onerror = (err) => {
+      console.error('[BG SYNC] image load FAILED:', err, 'url starts with:', bgImageUrl.substring(0, 50));
     };
     img.src = bgImageUrl;
   }
