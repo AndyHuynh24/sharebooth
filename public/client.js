@@ -3692,6 +3692,33 @@ document.getElementById('frameBorderColorPicker').addEventListener('input', e =>
   render();
 });
 
+// === Frame BG sync helper — sends full state, same pattern as snapAndEmit ===
+function emitFrameBg() {
+  if (!sessionCode) return;
+  socket.emit('frame-bg-change', {
+    code: sessionCode,
+    bgType: frameBgType,
+    bgColor: frameBgColor,
+    bgImageUrl: frameBgImageUrl,
+    bgMode: frameBgMode,
+    bgScale: frameBgScale
+  });
+}
+
+// Resize image to max dimension and return base64 JPEG (keeps socket payload small)
+function resizeImageForSync(img, maxDim) {
+  let w = img.naturalWidth || img.width;
+  let h = img.naturalHeight || img.height;
+  if (w > maxDim || h > maxDim) {
+    if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
+    else { w = Math.round(w * maxDim / h); h = maxDim; }
+  }
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  c.getContext('2d').drawImage(img, 0, 0, w, h);
+  return c.toDataURL('image/jpeg', 0.75);
+}
+
 // Frame background presets
 document.querySelectorAll('.fbg-opt').forEach(btn => {
   btn.addEventListener('click', () => {
@@ -3708,7 +3735,7 @@ document.querySelectorAll('.fbg-opt').forEach(btn => {
       frameBgImageUrl = null;
       updateBgScaleVisibility();
       render();
-      if (sessionCode) socket.emit('frame-bg-change', { code: sessionCode, bgType: 'color', bgColor: frameBgColor, bgMode: frameBgMode, bgScale: frameBgScale });
+      emitFrameBg();
     } else if (val.startsWith('image:')) {
       const src = val.replace('image:', '');
       const img = new Image();
@@ -3718,10 +3745,7 @@ document.querySelectorAll('.fbg-opt').forEach(btn => {
         frameBgType = 'image';
         updateBgScaleVisibility();
         render();
-        if (sessionCode) {
-          console.log('[BG EMIT] preset image:', src);
-          socket.emit('frame-bg-change', { code: sessionCode, bgType: 'image', bgImageUrl: src, bgMode: frameBgMode, bgScale: frameBgScale });
-        }
+        emitFrameBg();
       };
       img.src = src;
     }
@@ -3737,7 +3761,7 @@ document.getElementById('fbgColorPicker').addEventListener('input', e => {
   document.querySelectorAll('.fbg-opt').forEach(b => b.classList.remove('active'));
   updateBgScaleVisibility();
   render();
-  if (sessionCode) socket.emit('frame-bg-change', { code: sessionCode, bgType: 'color', bgColor: frameBgColor, bgMode: frameBgMode, bgScale: frameBgScale });
+  emitFrameBg();
 });
 
 // Show/hide background scale slider based on bg type
@@ -3746,7 +3770,6 @@ function updateBgScaleVisibility() {
   if (group) group.style.display = (frameBgType === 'image' && frameBgImage) ? '' : 'none';
   const sliderLabel = document.getElementById('bgScaleSliderLabel');
   if (sliderLabel) sliderLabel.style.display = frameBgMode === 'repeat' ? '' : 'none';
-  // Update slider range based on mode
   const slider = document.getElementById('frameBgScaleSlider');
   if (slider && frameBgMode === 'repeat') {
     slider.min = '15';
@@ -3763,7 +3786,7 @@ document.querySelectorAll('.fbg-mode-btn').forEach(btn => {
     frameBgMode = btn.dataset.bgmode;
     updateBgScaleVisibility();
     render();
-    if (sessionCode) socket.emit('frame-bg-change', { code: sessionCode, bgType: frameBgType, bgColor: frameBgColor, bgImageUrl: frameBgImageUrl, bgMode: frameBgMode, bgScale: frameBgScale });
+    emitFrameBg();
   });
 });
 
@@ -3771,22 +3794,8 @@ document.querySelectorAll('.fbg-mode-btn').forEach(btn => {
 document.getElementById('frameBgScaleSlider').addEventListener('input', e => {
   frameBgScale = parseInt(e.target.value, 10) / 100;
   render();
-  if (sessionCode) socket.emit('frame-bg-change', { code: sessionCode, bgType: frameBgType, bgColor: frameBgColor, bgImageUrl: frameBgImageUrl, bgMode: frameBgMode, bgScale: frameBgScale });
+  emitFrameBg();
 });
-
-// Resize image to max dimension and return base64 JPEG (keeps socket payload small)
-function resizeImageForSync(img, maxDim) {
-  let w = img.naturalWidth || img.width;
-  let h = img.naturalHeight || img.height;
-  if (w > maxDim || h > maxDim) {
-    if (w > h) { h = Math.round(h * maxDim / w); w = maxDim; }
-    else { w = Math.round(w * maxDim / h); h = maxDim; }
-  }
-  const c = document.createElement('canvas');
-  c.width = w; c.height = h;
-  c.getContext('2d').drawImage(img, 0, 0, w, h);
-  return c.toDataURL('image/jpeg', 0.75);
-}
 
 // Frame BG image upload
 document.querySelector('.fbg-upload-btn').addEventListener('click', () => {
@@ -3801,62 +3810,53 @@ document.getElementById('fbgImageUpload').addEventListener('change', e => {
     img.onload = () => {
       frameBgImage = img;
       frameBgType = 'image';
-      const resized = resizeImageForSync(img, 1200);
-      frameBgImageUrl = resized;
+      frameBgImageUrl = resizeImageForSync(img, 1200);
       document.querySelectorAll('.fbg-opt').forEach(b => b.classList.remove('active'));
       document.querySelector('.fbg-upload-btn').classList.add('active');
       updateBgScaleVisibility();
       render();
-      if (sessionCode) {
-        console.log('[BG EMIT] uploaded image, resized len:', resized.length);
-        socket.emit('frame-bg-change', { code: sessionCode, bgType: 'image', bgImageUrl: resized, bgMode: frameBgMode, bgScale: frameBgScale });
-      }
+      emitFrameBg();
     };
     img.src = reader.result;
   };
   reader.readAsDataURL(file);
 });
 
-// Frame BG socket events
-function applyFrameBgFromSocket({ bgType, bgColor, bgImageUrl, bgMode, bgScale }) {
-  console.log('[BG SYNC] received:', bgType, 'hasImageUrl:', !!bgImageUrl, 'urlLen:', bgImageUrl ? bgImageUrl.length : 0);
-  // Sync mode and scale if provided
-  if (bgMode) {
-    frameBgMode = bgMode;
-    document.querySelectorAll('.fbg-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.bgmode === bgMode));
+// === Receive frame BG from other users (same pattern as receiving snapped photos) ===
+function applyFrameBgFromSocket(data) {
+  if (data.bgMode) {
+    frameBgMode = data.bgMode;
+    document.querySelectorAll('.fbg-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.bgmode === data.bgMode));
   }
-  if (bgScale !== undefined && bgScale !== null) {
-    frameBgScale = bgScale;
+  if (data.bgScale != null) {
+    frameBgScale = data.bgScale;
     const slider = document.getElementById('frameBgScaleSlider');
-    if (slider) slider.value = String(Math.round(bgScale * 100));
+    if (slider) slider.value = String(Math.round(data.bgScale * 100));
   }
-  if (bgType === 'color' && bgColor) {
+
+  if (data.bgType === 'color') {
     frameBgType = 'color';
-    frameBgColor = bgColor;
+    frameBgColor = data.bgColor || '#8070B6';
     frameBgImage = null;
     frameBgImageUrl = null;
     document.querySelectorAll('.fbg-opt').forEach(b => {
-      b.classList.toggle('active', b.dataset.fbg === 'color:' + bgColor);
+      b.classList.toggle('active', b.dataset.fbg === 'color:' + frameBgColor);
     });
     updateBgScaleVisibility();
     render();
-  } else if (bgType === 'image' && bgImageUrl) {
+  } else if (data.bgType === 'image' && data.bgImageUrl) {
     const img = new Image();
     img.onload = () => {
-      console.log('[BG SYNC] image loaded OK, applying');
       frameBgImage = img;
-      frameBgImageUrl = bgImageUrl;
+      frameBgImageUrl = data.bgImageUrl;
       frameBgType = 'image';
       document.querySelectorAll('.fbg-opt').forEach(b => {
-        b.classList.toggle('active', b.dataset.fbg === 'image:' + bgImageUrl);
+        b.classList.toggle('active', b.dataset.fbg === 'image:' + data.bgImageUrl);
       });
       updateBgScaleVisibility();
       render();
     };
-    img.onerror = (err) => {
-      console.error('[BG SYNC] image load FAILED:', err, 'url starts with:', bgImageUrl.substring(0, 50));
-    };
-    img.src = bgImageUrl;
+    img.src = data.bgImageUrl;
   }
 }
 socket.on('frame-bg-change', applyFrameBgFromSocket);

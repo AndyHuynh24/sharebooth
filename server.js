@@ -50,7 +50,7 @@ app.post('/api/create', (req, res) => {
     decorations: [],
     currentPrompt: null,
     layout: layout || 'strip',
-    frameBg: { type: 'color', color: '#8070B6' }
+    frameBg: { bgType: 'color', bgColor: '#8070B6' }
   };
   res.json({ code });
 });
@@ -108,7 +108,7 @@ io.on('connection', socket => {
     }
     socket.emit('layout-sync', { layout: sessions[code].layout });
     const fb = sessions[code].frameBg;
-    socket.emit('frame-bg-sync', { bgType: fb.type, bgColor: fb.color, bgImageUrl: fb.imageUrl, bgMode: fb.mode, bgScale: fb.scale });
+    if (fb) socket.emit('frame-bg-sync', fb);
     if (sessions[code].frameBorder) {
       socket.emit('frame-border-change', sessions[code].frameBorder);
     }
@@ -198,17 +198,16 @@ io.on('connection', socket => {
     socket.to(code).emit('aspect-ratio-change', { aspectRatio });
   });
 
-  // Frame background (merge fields so mode/scale changes don't wipe imageUrl)
-  socket.on('frame-bg-change', ({ code, bgType, bgColor, bgImageUrl, bgMode, bgScale }) => {
-    if (!sessions[code]) return;
-    const fb = sessions[code].frameBg;
-    if (bgType !== undefined) fb.type = bgType;
-    if (bgColor !== undefined) fb.color = bgColor;
-    if (bgImageUrl !== undefined) fb.imageUrl = bgImageUrl;
-    if (bgMode !== undefined) fb.mode = bgMode;
-    if (bgScale !== undefined) fb.scale = bgScale;
-    console.log(code, 'frame-bg-change', 'type=' + fb.type, 'hasImageUrl=' + !!fb.imageUrl, 'imageUrlLen=' + (fb.imageUrl ? fb.imageUrl.length : 0));
-    socket.to(code).emit('frame-bg-change', { bgType: fb.type, bgColor: fb.color, bgImageUrl: fb.imageUrl, bgMode: fb.mode, bgScale: fb.scale });
+  // Frame background — store everything and broadcast directly (same pattern as snapped)
+  socket.on('frame-bg-change', (data) => {
+    const code = data.code;
+    if (!code || !sessions[code]) return;
+    // Store the full payload (minus code)
+    const payload = { bgType: data.bgType, bgColor: data.bgColor, bgImageUrl: data.bgImageUrl, bgMode: data.bgMode, bgScale: data.bgScale };
+    // Update server state for late joiners
+    sessions[code].frameBg = payload;
+    // Broadcast to everyone else in the room
+    socket.to(code).emit('frame-bg-change', payload);
   });
 
   // Frame border sync
