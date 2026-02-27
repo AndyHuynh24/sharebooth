@@ -198,11 +198,16 @@ io.on('connection', socket => {
     socket.to(code).emit('aspect-ratio-change', { aspectRatio });
   });
 
-  // Frame background
+  // Frame background (merge fields so mode/scale changes don't wipe imageUrl)
   socket.on('frame-bg-change', ({ code, bgType, bgColor, bgImageUrl, bgMode, bgScale }) => {
     if (!sessions[code]) return;
-    sessions[code].frameBg = { type: bgType, color: bgColor, imageUrl: bgImageUrl, mode: bgMode, scale: bgScale };
-    socket.to(code).emit('frame-bg-change', { bgType, bgColor, bgImageUrl, bgMode, bgScale });
+    const fb = sessions[code].frameBg;
+    if (bgType !== undefined) fb.type = bgType;
+    if (bgColor !== undefined) fb.color = bgColor;
+    if (bgImageUrl !== undefined) fb.imageUrl = bgImageUrl;
+    if (bgMode !== undefined) fb.mode = bgMode;
+    if (bgScale !== undefined) fb.scale = bgScale;
+    socket.to(code).emit('frame-bg-change', { bgType: fb.type, bgColor: fb.color, bgImageUrl: fb.imageUrl, bgMode: fb.mode, bgScale: fb.scale });
   });
 
   // Frame border sync

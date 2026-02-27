@@ -46,6 +46,7 @@ let latestSegmentationMask = null; // latest mask from MediaPipe
 let frameBgType = 'color';       // 'color' | 'image'
 let frameBgColor = '#8070B6';    // default purple (matches heart/accent)
 let frameBgImage = null;         // Image element
+let frameBgImageUrl = null;      // URL or base64 of current bg image (for socket sync)
 let frameBgScale = 1.0;          // tile size as fraction of canvas width
 let frameBgMode = 'fit';         // 'fit' | 'repeat' | 'cover'
 
@@ -3704,6 +3705,7 @@ document.querySelectorAll('.fbg-opt').forEach(btn => {
       frameBgType = 'color';
       frameBgColor = val.replace('color:', '');
       frameBgImage = null;
+      frameBgImageUrl = null;
       updateBgScaleVisibility();
       render();
       if (sessionCode) socket.emit('frame-bg-change', { code: sessionCode, bgType: 'color', bgColor: frameBgColor, bgMode: frameBgMode, bgScale: frameBgScale });
@@ -3712,6 +3714,7 @@ document.querySelectorAll('.fbg-opt').forEach(btn => {
       const img = new Image();
       img.onload = () => {
         frameBgImage = img;
+        frameBgImageUrl = src;
         frameBgType = 'image';
         updateBgScaleVisibility();
         render();
@@ -3727,6 +3730,7 @@ document.getElementById('fbgColorPicker').addEventListener('input', e => {
   frameBgType = 'color';
   frameBgColor = e.target.value;
   frameBgImage = null;
+  frameBgImageUrl = null;
   document.querySelectorAll('.fbg-opt').forEach(b => b.classList.remove('active'));
   updateBgScaleVisibility();
   render();
@@ -3756,7 +3760,7 @@ document.querySelectorAll('.fbg-mode-btn').forEach(btn => {
     frameBgMode = btn.dataset.bgmode;
     updateBgScaleVisibility();
     render();
-    if (sessionCode) socket.emit('frame-bg-change', { code: sessionCode, bgType: frameBgType, bgColor: frameBgColor, bgMode: frameBgMode, bgScale: frameBgScale });
+    if (sessionCode) socket.emit('frame-bg-change', { code: sessionCode, bgType: frameBgType, bgColor: frameBgColor, bgImageUrl: frameBgImageUrl, bgMode: frameBgMode, bgScale: frameBgScale });
   });
 });
 
@@ -3764,7 +3768,7 @@ document.querySelectorAll('.fbg-mode-btn').forEach(btn => {
 document.getElementById('frameBgScaleSlider').addEventListener('input', e => {
   frameBgScale = parseInt(e.target.value, 10) / 100;
   render();
-  if (sessionCode) socket.emit('frame-bg-change', { code: sessionCode, bgType: frameBgType, bgColor: frameBgColor, bgMode: frameBgMode, bgScale: frameBgScale });
+  if (sessionCode) socket.emit('frame-bg-change', { code: sessionCode, bgType: frameBgType, bgColor: frameBgColor, bgImageUrl: frameBgImageUrl, bgMode: frameBgMode, bgScale: frameBgScale });
 });
 
 // Resize image to max dimension and return base64 JPEG (keeps socket payload small)
@@ -3794,12 +3798,13 @@ document.getElementById('fbgImageUpload').addEventListener('change', e => {
     img.onload = () => {
       frameBgImage = img;
       frameBgType = 'image';
+      const resized = resizeImageForSync(img, 1200);
+      frameBgImageUrl = resized;
       document.querySelectorAll('.fbg-opt').forEach(b => b.classList.remove('active'));
       document.querySelector('.fbg-upload-btn').classList.add('active');
       updateBgScaleVisibility();
       render();
       if (sessionCode) {
-        const resized = resizeImageForSync(img, 1200);
         socket.emit('frame-bg-change', { code: sessionCode, bgType: 'image', bgImageUrl: resized, bgMode: frameBgMode, bgScale: frameBgScale });
       }
     };
@@ -3824,6 +3829,7 @@ function applyFrameBgFromSocket({ bgType, bgColor, bgImageUrl, bgMode, bgScale }
     frameBgType = 'color';
     frameBgColor = bgColor;
     frameBgImage = null;
+    frameBgImageUrl = null;
     document.querySelectorAll('.fbg-opt').forEach(b => {
       b.classList.toggle('active', b.dataset.fbg === 'color:' + bgColor);
     });
@@ -3833,6 +3839,7 @@ function applyFrameBgFromSocket({ bgType, bgColor, bgImageUrl, bgMode, bgScale }
     const img = new Image();
     img.onload = () => {
       frameBgImage = img;
+      frameBgImageUrl = bgImageUrl;
       frameBgType = 'image';
       document.querySelectorAll('.fbg-opt').forEach(b => {
         b.classList.toggle('active', b.dataset.fbg === 'image:' + bgImageUrl);
