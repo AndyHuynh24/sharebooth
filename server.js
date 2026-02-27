@@ -201,12 +201,15 @@ io.on('connection', socket => {
   // Frame background — store everything and broadcast directly (same pattern as snapped)
   socket.on('frame-bg-change', (data) => {
     const code = data.code;
-    if (!code || !sessions[code]) return;
+    console.log('[BG-SYNC] Received frame-bg-change from', socket.id, '| code:', code, '| bgType:', data.bgType, '| hasImageUrl:', !!data.bgImageUrl, '| imgLen:', data.bgImageUrl ? data.bgImageUrl.length : 0);
+    if (!code || !sessions[code]) { console.log('[BG-SYNC] REJECTED: code invalid or session missing'); return; }
     // Store the full payload (minus code)
     const payload = { bgType: data.bgType, bgColor: data.bgColor, bgImageUrl: data.bgImageUrl, bgMode: data.bgMode, bgScale: data.bgScale };
     // Update server state for late joiners
     sessions[code].frameBg = payload;
     // Broadcast to everyone else in the room
+    const roomSize = io.sockets.adapter.rooms.get(code)?.size || 0;
+    console.log('[BG-SYNC] Broadcasting to room', code, '| room size:', roomSize);
     socket.to(code).emit('frame-bg-change', payload);
   });
 

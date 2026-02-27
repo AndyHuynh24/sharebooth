@@ -3694,15 +3694,17 @@ document.getElementById('frameBorderColorPicker').addEventListener('input', e =>
 
 // === Frame BG sync helper — sends full state, same pattern as snapAndEmit ===
 function emitFrameBg() {
-  if (!sessionCode) return;
-  socket.emit('frame-bg-change', {
+  if (!sessionCode) { console.warn('[BG-SYNC] emitFrameBg skipped: no sessionCode'); return; }
+  const payload = {
     code: sessionCode,
     bgType: frameBgType,
     bgColor: frameBgColor,
     bgImageUrl: frameBgImageUrl,
     bgMode: frameBgMode,
     bgScale: frameBgScale
-  });
+  };
+  console.log('[BG-SYNC] EMIT frame-bg-change', { code: payload.code, bgType: payload.bgType, hasImageUrl: !!payload.bgImageUrl, imgLen: payload.bgImageUrl ? payload.bgImageUrl.length : 0 });
+  socket.emit('frame-bg-change', payload);
 }
 
 // Resize image to max dimension and return base64 JPEG (keeps socket payload small)
@@ -3824,6 +3826,7 @@ document.getElementById('fbgImageUpload').addEventListener('change', e => {
 
 // === Receive frame BG from other users (same pattern as receiving snapped photos) ===
 function applyFrameBgFromSocket(data) {
+  console.log('[BG-SYNC] RECEIVED', { bgType: data.bgType, bgColor: data.bgColor, hasImageUrl: !!data.bgImageUrl, imgLen: data.bgImageUrl ? data.bgImageUrl.length : 0, bgMode: data.bgMode, bgScale: data.bgScale });
   if (data.bgMode) {
     frameBgMode = data.bgMode;
     document.querySelectorAll('.fbg-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.bgmode === data.bgMode));
