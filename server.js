@@ -108,6 +108,9 @@ io.on('connection', socket => {
     }
     socket.emit('layout-sync', { layout: sessions[code].layout });
     socket.emit('frame-bg-sync', sessions[code].frameBg);
+    if (sessions[code].frameBorder) {
+      socket.emit('frame-border-change', sessions[code].frameBorder);
+    }
     if (sessions[code].aspectRatio) {
       socket.emit('aspect-ratio-sync', { aspectRatio: sessions[code].aspectRatio });
     }
@@ -121,9 +124,15 @@ io.on('connection', socket => {
     socket.to(code).emit('snapped', { layer });
   });
 
+  socket.on('photo-delete', ({ code, photoId }) => {
+    if (!sessions[code] || !photoId) return;
+    sessions[code].layers = sessions[code].layers.filter(l => l.id !== photoId);
+    socket.to(code).emit('photo-delete', { photoId });
+  });
+
   socket.on('finish', ({ code }) => {
     if (!sessions[code]) return;
-    io.to(code).emit('finish', { layers: sessions[code].layers });
+    socket.to(code).emit('finish', { layers: sessions[code].layers });
   });
 
   // Pose prompt
@@ -167,6 +176,13 @@ io.on('connection', socket => {
     socket.to(code).emit('decoration-remove', { id });
   });
 
+  socket.on('decoration-update', ({ code, id, props }) => {
+    if (!sessions[code]) return;
+    const dec = sessions[code].decorations.find(d => d.id === id);
+    if (dec) Object.assign(dec, props);
+    socket.to(code).emit('decoration-update', { id, props });
+  });
+
   // Layout
   socket.on('layout-change', ({ code, layout }) => {
     if (!sessions[code]) return;
@@ -186,6 +202,16 @@ io.on('connection', socket => {
     if (!sessions[code]) return;
     sessions[code].frameBg = { type: bgType, color: bgColor };
     socket.to(code).emit('frame-bg-change', { bgType, bgColor });
+  });
+
+  // Frame border sync
+  socket.on('frame-border-change', ({ code, width, radius, color }) => {
+    if (!sessions[code]) return;
+    if (!sessions[code].frameBorder) sessions[code].frameBorder = {};
+    if (width !== undefined) sessions[code].frameBorder.width = width;
+    if (radius !== undefined) sessions[code].frameBorder.radius = radius;
+    if (color !== undefined) sessions[code].frameBorder.color = color;
+    socket.to(code).emit('frame-border-change', { width, radius, color });
   });
 
   // Photo edit (move/scale/shape/crop) sync

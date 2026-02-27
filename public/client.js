@@ -10,7 +10,7 @@ let sessionCode = null;
 let participants = [];
 let layers = [];       // sparse: layers[slotIndex] = photo object or null
 let photoBank = [];    // unassigned photos (max MAX_PHOTOS total)
-const MAX_PHOTOS = 8;
+const MAX_PHOTOS = 12;
 const imageCache = new Map();
 let isHost = false;
 
@@ -25,6 +25,7 @@ let devicePixelRatioVal = Math.max(1, window.devicePixelRatio || 1);
 const video = document.getElementById('video');
 let localStream = null;
 let cameraRunning = false;
+let cameraFlipped = true; // mirror by default (selfie view)
 
 // Background removal
 let bgRemovalEnabled = false;
@@ -45,7 +46,8 @@ let latestSegmentationMask = null; // latest mask from MediaPipe
 let frameBgType = 'color';       // 'color' | 'image'
 let frameBgColor = '#8070B6';    // default purple (matches heart/accent)
 let frameBgImage = null;         // Image element
-let frameBgScale = 0.25;         // tile size as fraction of canvas width (0.05–1.0)
+let frameBgScale = 1.0;          // tile size as fraction of canvas width
+let frameBgMode = 'fit';         // 'fit' | 'repeat' | 'cover'
 
 // Frame shape (defaults — applied to new photos, or overridden per-photo)
 let frameShapeDefault = 'rounded';  // default for new photos
@@ -94,7 +96,7 @@ let dragOffset = { x: 0, y: 0 };
 
 // Layout
 let currentLayout = 'strip';
-let canvasRatioOverride = 3 / 8; // default to 4-Cut Strip
+let canvasRatioOverride = 2 / 6; // default to Photobooth strip
 
 // Wizard state
 let wizardStep = 1;
@@ -137,7 +139,7 @@ const RATIO_MAP = {
   '3:4': 3 / 4,
   '16:9': 16 / 9,
   '2:3': 2 / 3,
-  '4cut': 3 / 8,
+  '4cut': 2 / 6,
 };
 
 // Prompts
@@ -238,25 +240,26 @@ function resizeCanvasImmediate() {
   // Compute the max available space from the parent container
   const parent = preview.parentElement;
   const parentRect = parent.getBoundingClientRect();
-  // Available height: parent height minus toolbar and gaps (~60px for toolbar)
   const maxW = parentRect.width;
-  const maxH = Math.max(200, parentRect.height - 60);
+  const maxH = Math.max(200, parentRect.height - 4);
 
-  // Compute actual canvas size that fits within maxW x maxH at the given aspect ratio
+  // Fit canvas within available space while preserving aspect ratio
   let w, h;
   if (ratio >= 1) {
     // Landscape or square: width-limited
     w = Math.min(maxW, maxH * ratio);
     h = w / ratio;
   } else {
-    // Portrait: height-limited
+    // Portrait: height-limited first, then check width
     h = Math.min(maxH, maxW / ratio);
     w = h * ratio;
   }
-  // Ensure it doesn't exceed available width
   if (w > maxW) { w = maxW; h = w / ratio; }
-  // Ensure it doesn't exceed available height
   if (h > maxH) { h = maxH; w = h * ratio; }
+
+  // If the fitted size is too small, enforce a minimum and let parent scroll
+  const MIN_W = 200;
+  if (w < MIN_W) { w = MIN_W; h = w / ratio; }
 
   w = Math.round(w);
   h = Math.round(h);
@@ -485,16 +488,36 @@ function renderPhotoBank() {
       del.title = 'Delete photo';
       del.onclick = ((idx) => (e) => {
         e.stopPropagation();
+        const deleted = photoBank[idx];
         photoBank.splice(idx, 1);
         renderPhotoBank();
         updateSnapButton();
+        if (sessionCode && deleted && deleted.id) {
+          socket.emit('photo-delete', { code: sessionCode, photoId: deleted.id });
+        }
       })(i);
       wrapper.appendChild(del);
     }
 
     container.appendChild(wrapper);
   }
+  // Update scroll hint visibility
+  requestAnimationFrame(() => updateBankScrollHint());
 }
+
+function updateBankScrollHint() {
+  const thumbs = document.getElementById('thumbs');
+  const hint = document.getElementById('bankScrollHint');
+  if (!thumbs || !hint) return;
+  const hasOverflow = thumbs.scrollHeight > thumbs.clientHeight + 5;
+  const nearBottom = thumbs.scrollTop + thumbs.clientHeight >= thumbs.scrollHeight - 10;
+  hint.style.display = (hasOverflow && !nearBottom) ? '' : 'none';
+}
+
+(function() {
+  const thumbs = document.getElementById('thumbs');
+  if (thumbs) thumbs.addEventListener('scroll', updateBankScrollHint);
+})();
 
 function assignToSlot(bankIndex, slotIndex) {
   if (bankIndex < 0 || bankIndex >= photoBank.length) return;
@@ -637,7 +660,9 @@ async function doSnap() {
     const targetW = 480;
     const targetH = Math.round(targetW * (video.videoHeight / video.videoWidth || 3 / 4));
     tmpCanvas = document.createElement('canvas'); tmpCanvas.width = targetW; tmpCanvas.height = targetH;
-    tmpCanvas.getContext('2d').drawImage(video, 0, 0, targetW, targetH);
+    const snapCtx = tmpCanvas.getContext('2d');
+    if (cameraFlipped) { snapCtx.translate(targetW, 0); snapCtx.scale(-1, 1); }
+    snapCtx.drawImage(video, 0, 0, targetW, targetH);
   } else {
     tmpCanvas = document.createElement('canvas'); tmpCanvas.width = 480; tmpCanvas.height = 360;
     const tc = tmpCanvas.getContext('2d'); tc.fillStyle = '#ccc'; tc.fillRect(0, 0, 480, 360);
@@ -677,9 +702,56 @@ async function loadBgRemovalModule() {
   }
 }
 
+// Face detection for auto-placement (uses browser FaceDetector API)
+async function detectFaces(imageSource) {
+  if (!('FaceDetector' in window)) return [];
+  try {
+    const detector = new FaceDetector({ fastMode: true, maxDetectedFaces: 5 });
+    const faces = await detector.detect(imageSource);
+    return faces.map(f => f.boundingBox);
+  } catch (e) {
+    console.warn('Face detection failed:', e);
+    return [];
+  }
+}
+
+function computeCutoutPlacement(bgW, bgH, bgFaces, cutW, cutH, cutFaces) {
+  const defaultScale = 0.65;
+  const defaultResult = { x: bgW * 0.4, y: bgH - (cutH * defaultScale), scale: defaultScale };
+  if (bgFaces.length === 0) return defaultResult;
+
+  // Use the largest background face
+  const bgFace = bgFaces.reduce((a, b) => (a.width * a.height > b.width * b.height ? a : b));
+
+  let scale;
+  if (cutFaces.length > 0) {
+    const cutFace = cutFaces[0];
+    scale = (bgFace.height / cutFace.height) * 1.0;
+    scale = Math.max(0.3, Math.min(1.5, scale));
+  } else {
+    scale = (bgFace.height / cutH) * 3.5;
+    scale = Math.max(0.3, Math.min(1.0, scale));
+  }
+
+  const scaledW = cutW * scale;
+  const scaledH = cutH * scale;
+
+  // Position: place to the side of background person
+  const bgPersonCenterX = bgFace.x + bgFace.width / 2;
+  let x;
+  if (bgPersonCenterX < bgW * 0.5) {
+    x = Math.min(bgPersonCenterX + bgFace.width, bgW - scaledW);
+  } else {
+    x = Math.max(bgPersonCenterX - bgFace.width - scaledW, 0);
+  }
+
+  // Align feet to bottom
+  const y = bgH - scaledH;
+  return { x, y, scale };
+}
+
 async function removeBackground(srcCanvas) {
   const blob = await new Promise(r => srcCanvas.toBlob(r, 'image/png'));
-  // Overlay is managed by setSnapProcessing — no need to toggle here
   try {
     const mod = await loadBgRemovalModule();
     if (!mod || !mod.removeBackground) throw new Error('BG removal module not available');
@@ -688,7 +760,8 @@ async function removeBackground(srcCanvas) {
     const out = document.createElement('canvas');
     out.width = srcCanvas.width; out.height = srcCanvas.height;
     const oc = out.getContext('2d');
-    // Use virtual BG image if available, otherwise solid color
+
+    // Draw background
     if (virtualBgEnabled && virtualBgImage) {
       drawImageCover(oc, virtualBgImage, 0, 0, out.width, out.height);
     } else if (virtualBgEnabled && virtualBgColor) {
@@ -698,7 +771,26 @@ async function removeBackground(srcCanvas) {
       oc.fillStyle = selectedBgColor;
       oc.fillRect(0, 0, out.width, out.height);
     }
-    oc.drawImage(img, 0, 0, out.width, out.height);
+
+    // Auto-place cutout to match live preview placement
+    if (virtualBgEnabled && virtualBgImage && _livePlacement) {
+      // Scale live preview placement to snap canvas dimensions
+      const pw = livePreviewEl.width || out.width;
+      const ph = livePreviewEl.height || out.height;
+      const sx = out.width / pw, sy = out.height / ph;
+      const adj = _userAdjust;
+      const p = _livePlacement;
+      const dx = adj.dx * sx, dy = adj.dy * sy;
+      oc.drawImage(img, (p.x * sx) + dx, (p.y * sy) + dy, out.width * p.scale * adj.scaleMul, out.height * p.scale * adj.scaleMul);
+    } else if (virtualBgEnabled && virtualBgImage) {
+      // Fallback: detect faces at snap dimensions
+      const [bgFaces, cutFaces] = await Promise.all([detectFaces(out), detectFaces(img)]);
+      const p = computeCutoutPlacement(out.width, out.height, bgFaces, img.width, img.height, cutFaces);
+      oc.drawImage(img, p.x, p.y, img.width * p.scale, img.height * p.scale);
+    } else {
+      oc.drawImage(img, 0, 0, out.width, out.height);
+    }
+
     return out;
   } catch (err) {
     console.error('BG removal failed:', err);
@@ -739,6 +831,39 @@ async function initSelfieSegmentation() {
   return selfieSegmentation;
 }
 
+// Reusable temp canvas for mask thresholding
+let _maskCanvas = null;
+let _maskCtx = null;
+
+// Auto-placement state for live preview
+let _livePlacement = null;   // { x, y, scale } in preview canvas px
+let _placementPending = false;
+let _personCanvas = null;
+let _personCtx = null;
+let _userAdjust = { dx: 0, dy: 0, scaleMul: 1 }; // user drag + scale adjustment
+
+async function computeLivePlacement(cw, ch) {
+  if (_placementPending) return;
+  _placementPending = true;
+  try {
+    if (!virtualBgImage || cw === 0 || ch === 0) { _livePlacement = null; return; }
+    // Detect faces on the BG as rendered (drawImageCover crop)
+    const bgC = document.createElement('canvas'); bgC.width = cw; bgC.height = ch;
+    drawImageCover(bgC.getContext('2d'), virtualBgImage, 0, 0, cw, ch);
+    // Detect faces on current video frame at canvas size
+    const vidC = document.createElement('canvas'); vidC.width = cw; vidC.height = ch;
+    if (video && video.readyState >= 2) vidC.getContext('2d').drawImage(video, 0, 0, cw, ch);
+    const [bgFaces, cutFaces] = await Promise.all([detectFaces(bgC), detectFaces(vidC)]);
+    _livePlacement = computeCutoutPlacement(cw, ch, bgFaces, cw, ch, cutFaces);
+    _userAdjust = { dx: 0, dy: 0, scaleMul: 1 }; // reset on new placement
+  } catch (e) {
+    console.warn('Live placement failed:', e);
+    _livePlacement = null;
+  } finally {
+    _placementPending = false;
+  }
+}
+
 function onSegmentationResults(results) {
   // Store the latest segmentation mask for the render loop
   latestSegmentationMask = results.segmentationMask;
@@ -747,27 +872,78 @@ function onSegmentationResults(results) {
   const cw = livePreviewEl.width, ch = livePreviewEl.height;
   if (cw === 0 || ch === 0) return;
 
+  // Threshold the mask to binary (no soft edges that fade the background)
+  if (!_maskCanvas) { _maskCanvas = document.createElement('canvas'); _maskCtx = _maskCanvas.getContext('2d'); }
+  _maskCanvas.width = cw; _maskCanvas.height = ch;
+  _maskCtx.clearRect(0, 0, cw, ch);
+  _maskCtx.drawImage(results.segmentationMask, 0, 0, cw, ch);
+  const maskData = _maskCtx.getImageData(0, 0, cw, ch);
+  const d = maskData.data;
+  for (let i = 3; i < d.length; i += 4) {
+    d[i] = d[i] > 128 ? 255 : 0;
+  }
+  _maskCtx.putImageData(maskData, 0, 0);
+
   livePreviewCtx.save();
   livePreviewCtx.clearRect(0, 0, cw, ch);
 
-  // 1. Draw the chosen background (image or color)
-  if (virtualBgImage) {
+  const hasPlacement = virtualBgImage && _livePlacement;
+
+  if (hasPlacement) {
+    // Extract person-only using mask (flip if mirrored)
+    if (!_personCanvas) { _personCanvas = document.createElement('canvas'); _personCtx = _personCanvas.getContext('2d'); }
+    _personCanvas.width = cw; _personCanvas.height = ch;
+    if (cameraFlipped) { _personCtx.translate(cw, 0); _personCtx.scale(-1, 1); }
+    _personCtx.drawImage(results.image, 0, 0, cw, ch);
+    _personCtx.globalCompositeOperation = 'destination-in';
+    _personCtx.drawImage(_maskCanvas, 0, 0, cw, ch);
+
+    // Draw BG full canvas
     drawImageCover(livePreviewCtx, virtualBgImage, 0, 0, cw, ch);
+
+    // Draw person at computed position (+ user adjustments)
+    const p = _livePlacement;
+    const adj = _userAdjust;
+    const drawX = p.x + adj.dx;
+    const drawY = p.y + adj.dy;
+    const drawW = cw * p.scale * adj.scaleMul;
+    const drawH = ch * p.scale * adj.scaleMul;
+    livePreviewCtx.drawImage(_personCanvas, drawX, drawY, drawW, drawH);
+
+    // Bounding box
+    livePreviewCtx.strokeStyle = 'rgba(255, 107, 129, 0.8)';
+    livePreviewCtx.lineWidth = 2;
+    livePreviewCtx.setLineDash([6, 4]);
+    livePreviewCtx.strokeRect(drawX, drawY, drawW, drawH);
+    livePreviewCtx.setLineDash([]);
+    // Corner handles
+    const hs = 10;
+    livePreviewCtx.fillStyle = 'rgba(255, 107, 129, 0.9)';
+    for (const [cx, cy] of [[drawX, drawY], [drawX + drawW, drawY], [drawX, drawY + drawH], [drawX + drawW, drawY + drawH]]) {
+      livePreviewCtx.fillRect(cx - hs / 2, cy - hs / 2, hs, hs);
+    }
   } else {
-    livePreviewCtx.fillStyle = virtualBgColor || '#FFF6EB';
-    livePreviewCtx.fillRect(0, 0, cw, ch);
+    // Original compositing (no auto-placement)
+    if (virtualBgImage) {
+      drawImageCover(livePreviewCtx, virtualBgImage, 0, 0, cw, ch);
+    } else {
+      livePreviewCtx.fillStyle = virtualBgColor || '#FFF6EB';
+      livePreviewCtx.fillRect(0, 0, cw, ch);
+    }
+    // Flip mask + video together so person is mirrored but BG stays normal
+    if (cameraFlipped) { livePreviewCtx.translate(cw, 0); livePreviewCtx.scale(-1, 1); }
+    livePreviewCtx.globalCompositeOperation = 'destination-out';
+    livePreviewCtx.drawImage(_maskCanvas, 0, 0, cw, ch);
+    livePreviewCtx.globalCompositeOperation = 'destination-over';
+    livePreviewCtx.drawImage(results.image, 0, 0, cw, ch);
   }
 
-  // 2. Draw the segmentation mask
-  livePreviewCtx.globalCompositeOperation = 'destination-out';
-  livePreviewCtx.drawImage(results.segmentationMask, 0, 0, cw, ch);
-
-  // 3. Now the background has a hole where the person is.
-  //    Draw it all behind the person using destination-over
-  livePreviewCtx.globalCompositeOperation = 'destination-over';
-  livePreviewCtx.drawImage(results.image, 0, 0, cw, ch);
-
   livePreviewCtx.restore();
+
+  // Trigger placement computation on first frame
+  if (virtualBgImage && !_livePlacement && !_placementPending) {
+    computeLivePlacement(cw, ch);
+  }
 }
 
 // ===== Live Virtual Background Preview =====
@@ -824,7 +1000,104 @@ function stopLivePreview() {
   if (segmentationLoop) { cancelAnimationFrame(segmentationLoop); segmentationLoop = null; }
   if (livePreviewRAF) { cancelAnimationFrame(livePreviewRAF); livePreviewRAF = null; }
   latestSegmentationMask = null;
+  _livePlacement = null;
+  _userAdjust = { dx: 0, dy: 0, scaleMul: 1 };
 }
+
+// Cutout bounding box interaction (move + scale)
+(function initCutoutInteraction() {
+  let mode = null; // 'drag' | 'resize'
+  let startX = 0, startY = 0;
+  let startDx = 0, startDy = 0, startScaleMul = 1, startDist = 0;
+  const HANDLE_R = 14; // hit radius for corner handles
+
+  function getPos(e) {
+    const r = livePreviewEl.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return { x: t.clientX - r.left, y: t.clientY - r.top };
+  }
+
+  function getCutoutBounds() {
+    if (!_livePlacement) return null;
+    const cw = livePreviewEl.width, ch = livePreviewEl.height;
+    const p = _livePlacement, adj = _userAdjust;
+    return { x: p.x + adj.dx, y: p.y + adj.dy, w: cw * p.scale * adj.scaleMul, h: ch * p.scale * adj.scaleMul };
+  }
+
+  function hitHandle(px, py) {
+    const b = getCutoutBounds();
+    if (!b) return false;
+    const corners = [[b.x, b.y], [b.x + b.w, b.y], [b.x, b.y + b.h], [b.x + b.w, b.y + b.h]];
+    for (const [cx, cy] of corners) {
+      if (Math.abs(px - cx) < HANDLE_R && Math.abs(py - cy) < HANDLE_R) return true;
+    }
+    return false;
+  }
+
+  function hitBody(px, py) {
+    const b = getCutoutBounds();
+    if (!b) return false;
+    return px >= b.x && px <= b.x + b.w && py >= b.y && py <= b.y + b.h;
+  }
+
+  function onDown(e) {
+    if (!_livePlacement) return;
+    const pos = getPos(e);
+
+    if (hitHandle(pos.x, pos.y)) {
+      e.preventDefault();
+      mode = 'resize';
+      const b = getCutoutBounds();
+      const centerX = b.x + b.w / 2, centerY = b.y + b.h / 2;
+      startDist = Math.hypot(pos.x - centerX, pos.y - centerY);
+      startScaleMul = _userAdjust.scaleMul;
+      startX = centerX; startY = centerY;
+      livePreviewEl.style.cursor = 'nwse-resize';
+    } else if (hitBody(pos.x, pos.y)) {
+      e.preventDefault();
+      mode = 'drag';
+      startX = pos.x; startY = pos.y;
+      startDx = _userAdjust.dx; startDy = _userAdjust.dy;
+      livePreviewEl.style.cursor = 'grabbing';
+    }
+  }
+
+  function onMove(e) {
+    if (!mode) {
+      // Update cursor on hover
+      if (!_livePlacement) return;
+      const pos = getPos(e);
+      if (hitHandle(pos.x, pos.y)) livePreviewEl.style.cursor = 'nwse-resize';
+      else if (hitBody(pos.x, pos.y)) livePreviewEl.style.cursor = 'grab';
+      else livePreviewEl.style.cursor = '';
+      return;
+    }
+    e.preventDefault();
+    const pos = getPos(e);
+
+    if (mode === 'drag') {
+      _userAdjust.dx = startDx + (pos.x - startX);
+      _userAdjust.dy = startDy + (pos.y - startY);
+    } else if (mode === 'resize') {
+      const newDist = Math.hypot(pos.x - startX, pos.y - startY);
+      if (startDist > 1) {
+        _userAdjust.scaleMul = Math.max(0.15, Math.min(3, startScaleMul * (newDist / startDist)));
+      }
+    }
+  }
+
+  function onUp() {
+    if (!mode) return;
+    mode = null;
+    livePreviewEl.style.cursor = _livePlacement ? 'grab' : '';
+  }
+
+  livePreviewEl.addEventListener('pointerdown', onDown);
+  livePreviewEl.addEventListener('pointermove', onMove);
+  window.addEventListener('pointerup', onUp);
+  livePreviewEl.addEventListener('touchstart', e => { if (_livePlacement) e.preventDefault(); }, { passive: false });
+  livePreviewEl.addEventListener('touchmove', e => { if (mode) e.preventDefault(); }, { passive: false });
+})();
 
 // ===== Layout Engine =====
 function getLayoutSlots(cw, ch, photoCount) {
@@ -912,13 +1185,33 @@ async function render(time = 0) {
   ctx.clearRect(0, 0, cw, ch);
   // Frame background (customizable)
   if (frameBgType === 'image' && frameBgImage) {
-    // Tiled/repeated background based on frameBgScale
-    const tileW = Math.max(10, cw * frameBgScale);
-    const aspect = frameBgImage.naturalWidth / frameBgImage.naturalHeight || 1;
-    const tileH = tileW / aspect;
-    for (let ty = 0; ty < ch; ty += tileH) {
-      for (let tx = 0; tx < cw; tx += tileW) {
-        ctx.drawImage(frameBgImage, tx, ty, tileW, tileH);
+    if (frameBgMode === 'cover') {
+      // Stretch to cover canvas
+      drawImageCover(ctx, frameBgImage, 0, 0, cw, ch);
+    } else if (frameBgMode === 'fit') {
+      // Scale to fit: contain within canvas, centered, with bg color fill
+      ctx.fillStyle = frameBgColor;
+      ctx.fillRect(0, 0, cw, ch);
+      const imgAspect = frameBgImage.naturalWidth / frameBgImage.naturalHeight || 1;
+      const canvasAspect = cw / ch;
+      let dw, dh;
+      if (imgAspect > canvasAspect) {
+        dw = cw; dh = cw / imgAspect;
+      } else {
+        dh = ch; dw = ch * imgAspect;
+      }
+      const dx = (cw - dw) / 2;
+      const dy = (ch - dh) / 2;
+      ctx.drawImage(frameBgImage, dx, dy, dw, dh);
+    } else {
+      // Tiled/repeated background based on frameBgScale
+      const tileW = Math.max(10, cw * frameBgScale);
+      const aspect = frameBgImage.naturalWidth / frameBgImage.naturalHeight || 1;
+      const tileH = tileW / aspect;
+      for (let ty = 0; ty < ch; ty += tileH) {
+        for (let tx = 0; tx < cw; tx += tileW) {
+          ctx.drawImage(frameBgImage, tx, ty, tileW, tileH);
+        }
       }
     }
   } else {
@@ -938,10 +1231,14 @@ async function render(time = 0) {
     // Freeform with nothing assigned
     if (!isExporting) {
       ctx.fillStyle = 'rgba(139,107,74,0.25)';
-      ctx.font = `${16 * d}px Inter, sans-serif`;
+      ctx.font = `bold ${32 * d}px Inter, sans-serif`;
       ctx.textAlign = 'center';
-      ctx.fillText('Snap photos, then drag them here!', cw / 2, ch / 2);
+      ctx.textBaseline = 'middle';
+      ctx.fillText('+', cw / 2, ch / 2 - 12 * d);
+      ctx.font = `${14 * d}px Inter, sans-serif`;
+      ctx.fillText('Snap photos, then tap to add', cw / 2, ch / 2 + 14 * d);
       ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
     }
     return;
   }
@@ -966,12 +1263,18 @@ async function render(time = 0) {
         ctx.setLineDash([8 * d, 6 * d]);
         ctx.strokeRect(slot.x + pad, slot.y + pad, slot.w - pad * 2, slot.h - pad * 2);
         ctx.setLineDash([]);
+        // "+" icon
         ctx.fillStyle = slotTextColor;
-        const fontSize = Math.max(10, Math.min(14, slot.w / (14 * d))) * d;
-        ctx.font = `600 ${fontSize}px Inter, sans-serif`;
+        const plusSize = Math.max(20, Math.min(40, slot.w / (6 * d))) * d;
+        ctx.font = `bold ${plusSize}px Inter, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText('Drag to input image', slot.x + slot.w / 2, slot.y + slot.h / 2);
+        ctx.fillText('+', slot.x + slot.w / 2, slot.y + slot.h / 2 - plusSize * 0.3);
+        // Helper text below "+"
+        const fontSize = Math.max(8, Math.min(12, slot.w / (16 * d))) * d;
+        ctx.font = `600 ${fontSize}px Inter, sans-serif`;
+        const helpText = window.innerWidth < 600 ? 'Tap to add' : 'Drag to add';
+        ctx.fillText(helpText, slot.x + slot.w / 2, slot.y + slot.h / 2 + plusSize * 0.45);
         ctx.textAlign = 'left';
         ctx.textBaseline = 'alphabetic';
         ctx.restore();
@@ -1180,15 +1483,21 @@ function drawPolaroid(img, x, y, w, h, rotation, layer, time, index) {
 // Shape path helpers — all shapes use hw/hh (half-width/half-height) for maximized bounding box
 
 function drawHeartPath(c, cx, cy, hw, hh) {
-  // Heart that fills the bounding box (hw x hh) maximally
+  // Classic heart shape with pronounced lobes and pointed bottom
   c.beginPath();
   const w = hw, h = hh;
-  // Bottom tip
-  c.moveTo(cx, cy + h * 0.85);
-  // Left curve
-  c.bezierCurveTo(cx - w * 1.1, cy + h * 0.1, cx - w * 1.0, cy - h * 0.7, cx, cy - h * 0.35);
-  // Right curve
-  c.bezierCurveTo(cx + w * 1.0, cy - h * 0.7, cx + w * 1.1, cy + h * 0.1, cx, cy + h * 0.85);
+  const topY = cy - h * 0.5;
+  const botY = cy + h * 0.9;
+  // Start at bottom tip
+  c.moveTo(cx, botY);
+  // Left side: bottom tip → left lobe peak → top center dip
+  c.bezierCurveTo(cx - w * 0.2, cy + h * 0.4, cx - w * 1.15, cy + h * 0.05, cx - w * 0.65, topY);
+  // Left lobe top curve
+  c.bezierCurveTo(cx - w * 0.3, cy - h * 0.95, cx - w * 0.02, cy - h * 0.5, cx, cy - h * 0.25);
+  // Right lobe top curve (mirror)
+  c.bezierCurveTo(cx + w * 0.02, cy - h * 0.5, cx + w * 0.3, cy - h * 0.95, cx + w * 0.65, topY);
+  // Right side: top center dip → right lobe peak → bottom tip
+  c.bezierCurveTo(cx + w * 1.15, cy + h * 0.05, cx + w * 0.2, cy + h * 0.4, cx, botY);
   c.closePath();
 }
 
@@ -1462,8 +1771,12 @@ function positionFloatingDecoDelete() {
   if (!d) { floatingDecoDelete.style.display = 'none'; return; }
 
   const canvasEl = document.getElementById('canvas');
+  const previewEl = document.getElementById('preview');
   const cssW = parseFloat(canvasEl.style.width) || canvasEl.offsetWidth;
   const cssH = parseFloat(canvasEl.style.height) || canvasEl.offsetHeight;
+  // Offset of canvas-preview within canvas-section
+  const offX = previewEl.offsetLeft;
+  const offY = previewEl.offsetTop;
   const s = getDecoSize(d);
   const hw = (s.w / 2) * cssW;
   const hh = (s.h / 2) * cssH;
@@ -1477,8 +1790,8 @@ function positionFloatingDecoDelete() {
   const cornerY = cy + hw * sin + (-hh) * cos;
 
   floatingDecoDelete.style.display = 'flex';
-  floatingDecoDelete.style.left = Math.max(0, Math.min(cssW - 15, cornerX - 5)) + 'px';
-  floatingDecoDelete.style.top = Math.max(0, Math.min(cssH - 15, cornerY - 5)) + 'px';
+  floatingDecoDelete.style.left = (offX + Math.max(0, Math.min(cssW - 15, cornerX - 5))) + 'px';
+  floatingDecoDelete.style.top = (offY + Math.max(0, Math.min(cssH - 15, cornerY - 5))) + 'px';
 }
 
 function positionFloatingTextEdit() {
@@ -1494,8 +1807,13 @@ function positionFloatingTextEdit() {
   }
 
   const canvasEl = document.getElementById('canvas');
+  const previewEl = document.getElementById('preview');
+  const sectionEl = previewEl.parentElement;
   const cssW = parseFloat(canvasEl.style.width) || canvasEl.offsetWidth;
   const cssH = parseFloat(canvasEl.style.height) || canvasEl.offsetHeight;
+  // Offset of canvas-preview within canvas-section
+  const offX = previewEl.offsetLeft;
+  const offY = previewEl.offsetTop;
   const s = getDecoSize(d);
   const hh = (s.h / 2) * cssH;
   const cx = d.x * cssW;
@@ -1509,10 +1827,12 @@ function positionFloatingTextEdit() {
 
   const toolbarW = floatingTextEdit.offsetWidth || 280;
   const toolbarH = floatingTextEdit.offsetHeight || 36;
+  const sectionW = sectionEl.offsetWidth;
 
   floatingTextEdit.style.display = 'flex';
-  floatingTextEdit.style.left = Math.max(0, Math.min(cssW - toolbarW, topX - toolbarW / 2)) + 'px';
-  floatingTextEdit.style.top = Math.max(0, topY - toolbarH - 8) + 'px';
+  const rawLeft = offX + topX - toolbarW / 2;
+  floatingTextEdit.style.left = Math.max(0, Math.min(sectionW - toolbarW, rawLeft)) + 'px';
+  floatingTextEdit.style.top = Math.max(0, offY + topY - toolbarH - 8) + 'px';
 
   // Sync control values
   document.getElementById('decoTextColor').value = d.color || '#8B6B4A';
@@ -1534,27 +1854,27 @@ floatingDecoDelete.addEventListener('click', (e) => {
 if (floatingTextEdit) {
   document.getElementById('decoTextColor').addEventListener('input', (e) => {
     const d = decorations.find(dec => dec.id === selectedDecoId);
-    if (d && d.type === 'text') { d.color = e.target.value; renderDecorations(); }
+    if (d && d.type === 'text') { d.color = e.target.value; renderDecorations(); if (sessionCode) socket.emit('decoration-update', { code: sessionCode, id: d.id, props: { color: d.color } }); }
   });
   document.getElementById('decoTextFont').addEventListener('change', (e) => {
     const d = decorations.find(dec => dec.id === selectedDecoId);
-    if (d && d.type === 'text') { d.fontFamily = e.target.value; renderDecorations(); }
+    if (d && d.type === 'text') { d.fontFamily = e.target.value; renderDecorations(); if (sessionCode) socket.emit('decoration-update', { code: sessionCode, id: d.id, props: { fontFamily: d.fontFamily } }); }
   });
   document.getElementById('decoTextSize').addEventListener('change', (e) => {
     const d = decorations.find(dec => dec.id === selectedDecoId);
-    if (d && d.type === 'text') { d.fontSize = parseInt(e.target.value, 10); renderDecorations(); }
+    if (d && d.type === 'text') { d.fontSize = parseInt(e.target.value, 10); renderDecorations(); if (sessionCode) socket.emit('decoration-update', { code: sessionCode, id: d.id, props: { fontSize: d.fontSize } }); }
   });
   document.getElementById('decoTextWeight').addEventListener('change', (e) => {
     const d = decorations.find(dec => dec.id === selectedDecoId);
-    if (d && d.type === 'text') { d.fontWeight = parseInt(e.target.value, 10); renderDecorations(); }
+    if (d && d.type === 'text') { d.fontWeight = parseInt(e.target.value, 10); renderDecorations(); if (sessionCode) socket.emit('decoration-update', { code: sessionCode, id: d.id, props: { fontWeight: d.fontWeight } }); }
   });
   document.getElementById('decoTextBg').addEventListener('input', (e) => {
     const d = decorations.find(dec => dec.id === selectedDecoId);
-    if (d && d.type === 'text') { d.bgColor = e.target.value; renderDecorations(); }
+    if (d && d.type === 'text') { d.bgColor = e.target.value; renderDecorations(); if (sessionCode) socket.emit('decoration-update', { code: sessionCode, id: d.id, props: { bgColor: d.bgColor } }); }
   });
   document.getElementById('decoTextBgToggle').addEventListener('change', (e) => {
     const d = decorations.find(dec => dec.id === selectedDecoId);
-    if (d && d.type === 'text') { d.showBg = e.target.checked; renderDecorations(); }
+    if (d && d.type === 'text') { d.showBg = e.target.checked; renderDecorations(); if (sessionCode) socket.emit('decoration-update', { code: sessionCode, id: d.id, props: { showBg: d.showBg } }); }
   });
   // Prevent pointer events on toolbar from deselecting
   floatingTextEdit.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -1793,6 +2113,19 @@ decoCanvas.addEventListener('pointerdown', (e) => {
         renderDecorations();
         render();
       } else {
+        // Tap on empty slot opens photo picker popup (mobile only)
+        if (photoBank.length > 0 && window.innerWidth < 600) {
+          const emptySlot = hitTestEmptySlot(canvasCoords.px, canvasCoords.py);
+          if (emptySlot >= 0) {
+            openPhotoPickerSheet(emptySlot);
+            return;
+          }
+          // Freeform: tap on empty canvas area to add a new photo
+          if (getMaxSlots() === Infinity) {
+            openPhotoPickerSheet(getAssignedCount());
+            return;
+          }
+        }
         // Deselect all
         selectedPhotoIndex = -1;
         updateShapeUIForPhoto(-1);
@@ -2004,7 +2337,7 @@ document.addEventListener('pointerup', (e) => {
   }
 });
 
-// ===== Canvas Drop Zone (drag from bank to frame) =====
+// ===== Canvas Drop Zone (drag from bank to frame — desktop) =====
 const canvasPreview = document.getElementById('preview');
 canvasPreview.addEventListener('dragover', (e) => {
   e.preventDefault();
@@ -2017,18 +2350,14 @@ canvasPreview.addEventListener('drop', (e) => {
   const canvasCoords = getCanvasCoords(e);
 
   if (bankIdx !== '') {
-    // Dragged from bank → find target slot
     const bi = parseInt(bankIdx, 10);
     const max = getMaxSlots();
     if (max === Infinity) {
-      // Freeform: check if dropped on an existing photo to replace it
       const targetPhoto = hitTestPhotoBody(canvasCoords.px, canvasCoords.py);
       if (targetPhoto >= 0 && layers[targetPhoto]) {
-        // Replace: swap the image but keep all transforms
         const oldLayer = layers[targetPhoto];
         const newPhoto = photoBank.splice(bi, 1)[0];
         if (newPhoto) {
-          // Copy transforms from old to new
           newPhoto.scale = oldLayer.scale || 1;
           newPhoto.shape = oldLayer.shape || frameShapeDefault;
           newPhoto.borderColor = oldLayer.borderColor || null;
@@ -2040,67 +2369,38 @@ canvasPreview.addEventListener('drop', (e) => {
           newPhoto.rotation = oldLayer.rotation || 0;
           newPhoto.dropProgress = 1;
           newPhoto.dropStartTs = null;
-          // Reset old photo transforms and return to bank
-          oldLayer.scale = 1;
-          oldLayer.offsetX = 0;
-          oldLayer.offsetY = 0;
-          oldLayer.cropX = 0;
-          oldLayer.cropY = 0;
-          oldLayer.cropScale = 1;
-          oldLayer.rotation = 0;
+          oldLayer.scale = 1; oldLayer.offsetX = 0; oldLayer.offsetY = 0;
+          oldLayer.cropX = 0; oldLayer.cropY = 0; oldLayer.cropScale = 1; oldLayer.rotation = 0;
           photoBank.push(oldLayer);
           layers[targetPhoto] = newPhoto;
-          renderPhotoBank();
-          render();
-          updateSnapButton();
+          renderPhotoBank(); render(); updateSnapButton();
           if (sessionCode) socket.emit('slot-assign', { code: sessionCode, slotIndex: targetPhoto, photoId: newPhoto.id });
         }
       } else {
-        // Freeform: append to end (dropped on empty space)
         const newIdx = getAssignedCount();
         const photo = photoBank.splice(bi, 1)[0];
         if (photo) {
-          photo.dropProgress = 0;
-          photo.dropStartTs = null;
+          photo.dropProgress = 0; photo.dropStartTs = null;
           layers.push(photo);
-          renderPhotoBank();
-          render();
-          updateSnapButton();
+          renderPhotoBank(); render(); updateSnapButton();
           if (sessionCode) socket.emit('slot-assign', { code: sessionCode, slotIndex: newIdx, photoId: photo.id });
         }
       }
     } else {
-      // Fixed layout: find which slot was dropped on
       let targetSlot = hitTestEmptySlot(canvasCoords.px, canvasCoords.py);
-      if (targetSlot < 0) {
-        // Dropped on an occupied slot — swap
-        targetSlot = hitTestPhotoBody(canvasCoords.px, canvasCoords.py);
-      }
-      if (targetSlot < 0) {
-        // Find first empty slot
-        for (let s = 0; s < max; s++) {
-          if (!layers[s]) { targetSlot = s; break; }
-        }
-      }
-      if (targetSlot >= 0) {
-        assignToSlot(bi, targetSlot);
-      }
+      if (targetSlot < 0) targetSlot = hitTestPhotoBody(canvasCoords.px, canvasCoords.py);
+      if (targetSlot < 0) { for (let s = 0; s < max; s++) { if (!layers[s]) { targetSlot = s; break; } } }
+      if (targetSlot >= 0) assignToSlot(bi, targetSlot);
     }
   } else if (slotIdx !== '') {
-    // Dragged from a slot → unassign (dropped back on canvas but not on another slot)
-    // Check if dropped on another slot to swap
     const si = parseInt(slotIdx, 10);
     const targetBody = hitTestPhotoBody(canvasCoords.px, canvasCoords.py);
     const targetEmpty = hitTestEmptySlot(canvasCoords.px, canvasCoords.py);
-    if (targetBody >= 0 && targetBody !== si) {
-      swapSlots(si, targetBody);
-    } else if (targetEmpty >= 0) {
-      swapSlots(si, targetEmpty);
-    }
+    if (targetBody >= 0 && targetBody !== si) swapSlots(si, targetBody);
+    else if (targetEmpty >= 0) swapSlots(si, targetEmpty);
   }
 });
 
-// Also allow dropping bank photos on the bank area (reorder or drop from slot to unassign)
 document.getElementById('thumbs').addEventListener('dragover', (e) => {
   e.preventDefault();
   e.dataTransfer.dropEffect = 'move';
@@ -2108,10 +2408,51 @@ document.getElementById('thumbs').addEventListener('dragover', (e) => {
 document.getElementById('thumbs').addEventListener('drop', (e) => {
   e.preventDefault();
   const slotIdx = e.dataTransfer.getData('application/slot-index');
-  if (slotIdx !== '') {
-    unassignFromSlot(parseInt(slotIdx, 10));
-  }
+  if (slotIdx !== '') unassignFromSlot(parseInt(slotIdx, 10));
 });
+
+// ===== Bottom Sheet Photo Picker (mobile) =====
+let pendingSlotIndex = -1;
+
+function openPhotoPickerSheet(slotIndex) {
+  pendingSlotIndex = slotIndex;
+  const sheet = document.getElementById('photoPickerSheet');
+  const photosContainer = document.getElementById('bottomSheetPhotos');
+  photosContainer.innerHTML = '';
+
+  if (photoBank.length === 0) {
+    photosContainer.innerHTML = '<div class="photo-picker-empty">No photos yet. Snap some first!</div>';
+  } else {
+    photoBank.forEach((photo, i) => {
+      if (photo.state === 'pending') return; // skip uploading photos
+      const img = document.createElement('img');
+      img.src = photo.imageUrl;
+      img.className = 'sheet-photo-thumb';
+      img.alt = photo.owner || 'Photo';
+      img.addEventListener('click', () => {
+        assignToSlot(i, pendingSlotIndex);
+        closePhotoPickerSheet();
+      });
+      photosContainer.appendChild(img);
+    });
+    // If all photos are pending
+    if (photosContainer.children.length === 0) {
+      photosContainer.innerHTML = '<div class="photo-picker-empty">Photos are still processing...</div>';
+    }
+  }
+
+  sheet.style.display = 'flex';
+}
+
+function closePhotoPickerSheet() {
+  const sheet = document.getElementById('photoPickerSheet');
+  sheet.style.display = 'none';
+  pendingSlotIndex = -1;
+}
+
+// Close bottom sheet on backdrop click or cancel
+document.getElementById('bottomSheetBackdrop')?.addEventListener('click', closePhotoPickerSheet);
+document.getElementById('bottomSheetClose')?.addEventListener('click', closePhotoPickerSheet);
 
 // ===== Resize captured photos by dragging corners on main canvas =====
 let isResizingPhoto = false;
@@ -2426,7 +2767,6 @@ socket.on('finish', ({ layers: finalLayers }) => {
     }));
     renderPhotoBank(); render();
   }
-  exportCanvasPNG();
 });
 
 socket.on('layers-sync', ({ layers: sl }) => {
@@ -2462,6 +2802,10 @@ socket.on('decoration-remove', ({ id }) => {
   decorations = decorations.filter(d => d.id !== id);
   if (selectedDecoId === id) selectedDecoId = null;
   renderDecorations();
+});
+socket.on('decoration-update', ({ id, props }) => {
+  const d = decorations.find(dec => dec.id === id);
+  if (d) { Object.assign(d, props); renderDecorations(); }
 });
 socket.on('decorations-sync', ({ decorations: sd }) => {
   decorations = sd || [];
@@ -2546,6 +2890,27 @@ socket.on('slot-unassign', ({ slotIndex }) => {
   renderPhotoBank();
   render();
   updateSnapButton();
+});
+
+socket.on('photo-delete', ({ photoId }) => {
+  // Remove from bank
+  const bankIdx = photoBank.findIndex(p => p.id === photoId);
+  if (bankIdx >= 0) {
+    photoBank.splice(bankIdx, 1);
+    renderPhotoBank();
+    updateSnapButton();
+    return;
+  }
+  // Remove from layers (assigned slot)
+  for (let i = 0; i < layers.length; i++) {
+    if (layers[i] && layers[i].id === photoId) {
+      layers[i] = null;
+      renderPhotoBank();
+      render();
+      updateSnapButton();
+      return;
+    }
+  }
 });
 
 // ===== UI Wiring =====
@@ -2868,6 +3233,42 @@ document.getElementById('btnStopCamera').addEventListener('click', () => {
   }
 });
 
+// Flip camera
+document.getElementById('btnFlipCamera').addEventListener('click', () => {
+  cameraFlipped = !cameraFlipped;
+  video.classList.toggle('flipped', cameraFlipped);
+});
+
+// Import photo from file
+document.getElementById('btnImportPhoto').addEventListener('click', () => {
+  document.getElementById('importPhotoInput').click();
+});
+document.getElementById('importPhotoInput').addEventListener('change', (e) => {
+  const files = Array.from(e.target.files || []);
+  if (files.length === 0) return;
+  const remaining = MAX_PHOTOS - getTotalPhotoCount();
+  const toProcess = files.slice(0, Math.max(0, remaining));
+  toProcess.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const targetW = 480;
+        const targetH = Math.round(targetW * (img.height / img.width || 3 / 4));
+        const tmpCanvas = document.createElement('canvas');
+        tmpCanvas.width = targetW;
+        tmpCanvas.height = targetH;
+        const ctx = tmpCanvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, targetW, targetH);
+        snapAndEmit(tmpCanvas);
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  e.target.value = '';
+});
+
 // Remove BG panel toggle (popout like deco-panel)
 document.getElementById('bgRemoveToggleBtn').addEventListener('click', () => {
   const panel = document.getElementById('rmbgPanel');
@@ -2885,10 +3286,21 @@ document.addEventListener('click', e => {
     document.getElementById('bgRemoveToggleBtn').classList.remove('active');
   }
 });
-// Background removal enable/disable
+// Auto-enable BG removal + live preview when user picks any backdrop option
+function enableBgRemoval() {
+  bgRemovalEnabled = true;
+  virtualBgEnabled = true;
+  document.getElementById('bgRemoveToggle').checked = true;
+  startLivePreview();
+}
+
+// Background removal enable/disable toggle
 document.getElementById('bgRemoveToggle').addEventListener('change', e => {
   bgRemovalEnabled = e.target.checked;
-  if (!bgRemovalEnabled) {
+  if (bgRemovalEnabled) {
+    virtualBgEnabled = true;
+    startLivePreview();
+  } else {
     virtualBgEnabled = false;
     stopLivePreview();
   }
@@ -2897,6 +3309,12 @@ document.getElementById('bgRemoveToggle').addEventListener('change', e => {
 document.getElementById('bgColorCustom').addEventListener('input', e => {
   document.querySelectorAll('.bg-dot').forEach(b => b.classList.remove('active'));
   selectedBgColor = e.target.value;
+  virtualBgColor = e.target.value;
+  virtualBgImage = null;
+  // Deselect VBG photo thumbs
+  document.querySelectorAll('.vbg-photo-thumb').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.vbg-opt').forEach(b => b.classList.remove('active'));
+  enableBgRemoval();
 });
 
 document.querySelectorAll('.bg-dot').forEach(btn => {
@@ -2904,7 +3322,13 @@ document.querySelectorAll('.bg-dot').forEach(btn => {
     document.querySelectorAll('.bg-dot').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     const bg = btn.dataset.bg;
-    selectedBgColor = bg === 'transparent' ? null : bg;
+    selectedBgColor = bg;
+    virtualBgColor = bg;
+    virtualBgImage = null;
+    // Deselect VBG photo thumbs
+    document.querySelectorAll('.vbg-photo-thumb').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.vbg-opt').forEach(b => b.classList.remove('active'));
+    enableBgRemoval();
   });
 });
 
@@ -3082,14 +3506,17 @@ document.querySelectorAll('.vbg-opt').forEach(btn => {
     btn.classList.add('active');
 
     if (val === 'none') {
-      virtualBgEnabled = false;
       virtualBgImage = null;
+      _livePlacement = null; _userAdjust = { dx: 0, dy: 0, scaleMul: 1 };
+      bgRemovalEnabled = false;
+      virtualBgEnabled = false;
+      document.getElementById('bgRemoveToggle').checked = false;
       stopLivePreview();
     } else if (val.startsWith('color:')) {
-      virtualBgEnabled = true;
       virtualBgColor = val.replace('color:', '');
       virtualBgImage = null;
-      startLivePreview();
+      _livePlacement = null; _userAdjust = { dx: 0, dy: 0, scaleMul: 1 };
+      enableBgRemoval();
     }
   });
 });
@@ -3117,8 +3544,8 @@ function renderVbgPhotos() {
       bgImg.crossOrigin = 'anonymous';
       bgImg.onload = () => {
         virtualBgImage = bgImg;
-        virtualBgEnabled = true;
-        startLivePreview();
+        _livePlacement = null; _userAdjust = { dx: 0, dy: 0, scaleMul: 1 };
+        enableBgRemoval();
       };
       bgImg.src = l.imageUrl;
     });
@@ -3138,11 +3565,11 @@ document.getElementById('vbgUpload').addEventListener('change', e => {
     const img = new Image();
     img.onload = () => {
       virtualBgImage = img;
-      virtualBgEnabled = true;
+      _livePlacement = null; _userAdjust = { dx: 0, dy: 0, scaleMul: 1 };
       // Mark upload button as active
       document.querySelectorAll('.vbg-opt').forEach(b => b.classList.remove('active'));
       document.querySelector('.vbg-upload-btn').classList.add('active');
-      startLivePreview();
+      enableBgRemoval();
     };
     img.src = reader.result;
   };
@@ -3177,26 +3604,31 @@ function positionFloatingShapePicker(idx) {
 
   // Convert canvas coords to CSS coords (canvas is scaled by devicePixelRatio)
   const canvasEl = document.getElementById('canvas');
+  const previewEl = document.getElementById('preview');
+  const sectionEl = previewEl.parentElement;
   const cssW = parseFloat(canvasEl.style.width) || canvasEl.offsetWidth;
   const cssH = parseFloat(canvasEl.style.height) || canvasEl.offsetHeight;
   const scaleX = cssW / canvasEl.width;
   const scaleY = cssH / canvasEl.height;
+  // Offset of canvas-preview within canvas-section
+  const offX = previewEl.offsetLeft;
+  const offY = previewEl.offsetTop;
 
   // Compute top-center of photo accounting for rotation
   const rot = layers[idx].rotation || 0;
   const cx = r.sx + r.sw / 2, cy = r.sy + r.sh / 2;
   const cosR = Math.cos(rot), sinR = Math.sin(rot);
-  // Top-center in local coords is (0, -sh/2), rotate to world
   const worldTopX = cx + 0 * cosR - (-r.sh / 2) * sinR;
   const worldTopY = cy + 0 * sinR + (-r.sh / 2) * cosR;
 
-  const topY = worldTopY * scaleY;
-  const centerX = worldTopX * scaleX;
+  const topY = offY + worldTopY * scaleY;
+  const centerX = offX + worldTopX * scaleX;
   const pickerW = floatingShapePicker.offsetWidth || 200;
   const pickerH = floatingShapePicker.offsetHeight || 36;
+  const sectionW = sectionEl.offsetWidth;
 
   floatingShapePicker.style.display = 'flex';
-  floatingShapePicker.style.left = Math.max(0, Math.min(cssW - pickerW, centerX - pickerW / 2)) + 'px';
+  floatingShapePicker.style.left = Math.max(0, Math.min(sectionW - pickerW, centerX - pickerW / 2)) + 'px';
   floatingShapePicker.style.top = Math.max(0, topY - pickerH - 4) + 'px';
 }
 
@@ -3229,11 +3661,13 @@ document.getElementById('btnRemoveFromCanvas').addEventListener('click', () => {
 document.getElementById('frameBorderWidth').addEventListener('input', e => {
   frameBorderWidth = parseInt(e.target.value, 10);
   render();
+  if (sessionCode) socket.emit('frame-border-change', { code: sessionCode, width: frameBorderWidth });
 });
 
 document.getElementById('frameBorderRadius').addEventListener('input', e => {
   frameBorderRadius = parseInt(e.target.value, 10);
   render();
+  if (sessionCode) socket.emit('frame-border-change', { code: sessionCode, radius: frameBorderRadius });
 });
 
 // Frame border color
@@ -3246,6 +3680,7 @@ document.getElementById('frameBorderColorPicker').addEventListener('input', e =>
     }
   } else {
     frameBorderColor = e.target.value;
+    if (sessionCode) socket.emit('frame-border-change', { code: sessionCode, color: frameBorderColor });
   }
   render();
 });
@@ -3266,6 +3701,16 @@ document.querySelectorAll('.fbg-opt').forEach(btn => {
       updateBgScaleVisibility();
       render();
       if (sessionCode) socket.emit('frame-bg-change', { code: sessionCode, bgType: 'color', bgColor: frameBgColor });
+    } else if (val.startsWith('image:')) {
+      const src = val.replace('image:', '');
+      const img = new Image();
+      img.onload = () => {
+        frameBgImage = img;
+        frameBgType = 'image';
+        updateBgScaleVisibility();
+        render();
+      };
+      img.src = src;
     }
   });
 });
@@ -3285,7 +3730,27 @@ document.getElementById('fbgColorPicker').addEventListener('input', e => {
 function updateBgScaleVisibility() {
   const group = document.getElementById('bgScaleGroup');
   if (group) group.style.display = (frameBgType === 'image' && frameBgImage) ? '' : 'none';
+  const sliderLabel = document.getElementById('bgScaleSliderLabel');
+  if (sliderLabel) sliderLabel.style.display = frameBgMode === 'repeat' ? '' : 'none';
+  // Update slider range based on mode
+  const slider = document.getElementById('frameBgScaleSlider');
+  if (slider && frameBgMode === 'repeat') {
+    slider.min = '15';
+    slider.max = '200';
+    if (parseInt(slider.value, 10) < 15) slider.value = '30';
+  }
 }
+
+// Background mode toggle (fit/repeat/cover)
+document.querySelectorAll('.fbg-mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.fbg-mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    frameBgMode = btn.dataset.bgmode;
+    updateBgScaleVisibility();
+    render();
+  });
+});
 
 // Background scale slider
 document.getElementById('frameBgScaleSlider').addEventListener('input', e => {
@@ -3341,6 +3806,14 @@ socket.on('frame-bg-sync', ({ bgType, bgColor }) => {
     updateBgScaleVisibility();
     render();
   }
+});
+
+// Frame border sync
+socket.on('frame-border-change', ({ width, radius, color }) => {
+  if (width !== undefined) { frameBorderWidth = width; document.getElementById('frameBorderWidth').value = width; }
+  if (radius !== undefined) { frameBorderRadius = radius; document.getElementById('frameBorderRadius').value = radius; }
+  if (color !== undefined) { frameBorderColor = color; document.getElementById('frameBorderColorPicker').value = color; }
+  render();
 });
 
 // Aspect ratio sync (from host or late join)
@@ -3511,11 +3984,11 @@ const tutorialSteps = [
     position: 'right'
   },
   {
-    target: 'photoBankSidebar',
+    target: 'preview',
     label: 'Step 2',
-    title: 'Drag photos to canvas',
-    desc: 'Your photos land here. Drag them into the frame!',
-    position: 'left'
+    title: 'Tap empty slots to add photos',
+    desc: 'After snapping, tap any empty frame slot to pick a photo.',
+    position: 'bottom'
   },
   {
     target: 'decoDialSection',
@@ -3541,11 +4014,11 @@ const tutorialSteps = [
     position: 'bottom'
   },
   {
-    target: 'exportSidebar',
-    label: 'Step 4',
+    target: 'finish',
+    label: 'Step 3',
     title: 'Export & share!',
     desc: 'Done? Save your creation here.',
-    position: 'left'
+    position: 'top'
   }
 ];
 

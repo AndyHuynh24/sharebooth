@@ -57,7 +57,7 @@
           <button class="wizard-opt" data-wratio="3:4">Portrait (3:4)</button>
           <button class="wizard-opt" data-wratio="16:9">Widescreen (16:9)</button>
           <button class="wizard-opt" data-wratio="2:3">Classic (2:3)</button>
-          <button class="wizard-opt active" data-wratio="4cut">4-Cut Strip</button>
+          <button class="wizard-opt active" data-wratio="4cut">Photobooth</button>
         </div>
       </div>
 
@@ -163,7 +163,7 @@
         <section class="camera-section" id="cameraSection">
           <div class="step-label"><span class="step-badge">Step 1</span> Snap a Photo</div>
           <div class="camera-wrapper">
-            <video id="video" autoplay playsinline muted></video>
+            <video id="video" class="flipped" autoplay playsinline muted></video>
             <canvas id="livePreview" style="display:none"></canvas>
             <div id="bgProcessing" class="processing-overlay" style="display:none">
               <div class="processing-content">
@@ -180,27 +180,33 @@
               </button>
               <div class="rmbg-panel" id="rmbgPanel" style="display:none">
                 <div class="rmbg-panel-content">
-                  <span class="rmbg-panel-title">Background Removal</span>
-                  <label class="toggle-label rmbg-toggle">
-                    <input type="checkbox" id="bgRemoveToggle" />
-                    <span>Enable</span>
-                  </label>
-                  <div class="rmbg-group">
-                    <span class="rmbg-group-label">BG Color</span>
-                    <div class="rmbg-color-row">
-                      <button class="bg-dot active" data-bg="#FFF6EB" style="background:#FFF6EB" title="Cream"></button>
-                      <button class="bg-dot" data-bg="transparent" title="None">&#10005;</button>
-                      <input type="color" id="bgColorCustom" class="fbg-color-rainbow" value="#FFF6EB" title="Custom color" />
-                    </div>
+                  <div class="rmbg-panel-header">
+                    <span class="rmbg-panel-title">Remove Background</span>
+                    <label class="rmbg-switch-label">
+                      <input type="checkbox" id="bgRemoveToggle" />
+                      <span class="rmbg-switch-track">
+                        <span class="rmbg-switch-thumb"></span>
+                      </span>
+                    </label>
                   </div>
+                  <span class="rmbg-panel-desc">Removes your background so you can appear on a friend's photo or a custom backdrop.</span>
                   <div class="rmbg-group">
-                    <span class="rmbg-group-label">Virtual BG</span>
+                    <span class="rmbg-group-label">Use a Photo as Backdrop</span>
                     <div class="rmbg-vbg-row">
-                      <button class="vbg-opt" data-vbg="none" title="Off">&#10005;</button>
                       <input type="file" id="vbgUpload" accept="image/*" style="display:none" />
-                      <button class="vbg-opt vbg-upload-btn" title="Upload image">+</button>
+                      <button class="vbg-opt vbg-upload-btn" title="Upload your own image">+</button>
+                      <span class="rmbg-upload-hint">Upload your own</span>
                     </div>
                     <div id="vbgPhotos" class="vbg-photos"></div>
+                  </div>
+                  <div class="rmbg-group">
+                    <span class="rmbg-group-label">Solid Color</span>
+                    <div class="rmbg-color-row">
+                      <button class="bg-dot active" data-bg="#FFF6EB" style="background:#FFF6EB" title="Cream"></button>
+                      <button class="bg-dot" data-bg="#FFFFFF" style="background:#FFF;border:1px solid #ddd" title="White"></button>
+                      <button class="bg-dot" data-bg="#000000" style="background:#000" title="Black"></button>
+                      <input type="color" id="bgColorCustom" class="fbg-color-rainbow" value="#FFF6EB" title="Custom color" />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -208,23 +214,36 @@
           </div>
           <!-- SNAP + Stop camera buttons -->
           <div class="snap-section">
-            <div class="camera-stop-wrapper">
-              <button id="btnStopCamera" class="btn btn-icon camera-stop-btn" title="Stop camera">&#9724;</button>
-              <span class="camera-stop-label">Pause</span>
+            <div class="snap-side snap-side-left">
+              <div class="camera-stop-wrapper">
+                <button id="btnStopCamera" class="btn btn-icon camera-stop-btn" title="Stop camera">&#9724;</button>
+                <span class="camera-stop-label">Pause</span>
+              </div>
+              <div class="camera-stop-wrapper">
+                <button id="btnImportPhoto" class="btn btn-icon camera-stop-btn" title="Import photo">&#128206;</button>
+                <span class="camera-stop-label">Import</span>
+              </div>
+              <input type="file" id="importPhotoInput" accept="image/*" multiple style="display:none" />
             </div>
             <button id="snap" class="btn-snap" aria-label="Take photo">
               <span class="snap-inner"></span>
               <span class="snap-label">Capture</span>
             </button>
-            <div class="timer-dropdown" id="timerDropdown">
-              <button class="btn-timer-trigger" id="btnTimerTrigger" title="Capture timer">
-                <span class="timer-icon">&#9201;</span>
-                <span class="timer-value" id="timerValue">Off</span>
-              </button>
-              <div class="timer-panel" id="timerPanel" style="display:none">
-                <button class="timer-opt active" data-timer="0">Off</button>
-                <button class="timer-opt" data-timer="3">3s</button>
-                <button class="timer-opt" data-timer="5">5s</button>
+            <div class="snap-side snap-side-right">
+              <div class="camera-stop-wrapper">
+                <button id="btnFlipCamera" class="btn btn-icon camera-stop-btn" title="Flip camera">&#8646;</button>
+                <span class="camera-stop-label">Flip</span>
+              </div>
+              <div class="timer-dropdown" id="timerDropdown">
+                <button class="btn-timer-trigger" id="btnTimerTrigger" title="Capture timer">
+                  <span class="timer-icon">&#9201;</span>
+                  <span class="timer-value" id="timerValue">Off</span>
+                </button>
+                <div class="timer-panel" id="timerPanel" style="display:none">
+                  <button class="timer-opt active" data-timer="0">Off</button>
+                  <button class="timer-opt" data-timer="3">3s</button>
+                  <button class="timer-opt" data-timer="5">5s</button>
+                </div>
               </div>
             </div>
           </div>
@@ -238,7 +257,7 @@
 
           <!-- Step 3: Decorations, Customize, Layout & Ratio pickers above canvas -->
           <div class="canvas-pickers">
-            <span class="step-badge">Step 3</span>
+            <span class="step-badge">Step 2</span>
             <div class="picker-dropdown" id="decoDialSection">
               <button class="picker-trigger" id="decoDialToggle">Add Decorations</button>
               <div class="picker-panel deco-panel" id="decoDial" style="display:none">
@@ -304,15 +323,32 @@
                   <div class="settings-group">
                     <span class="settings-group-label">Background</span>
                     <div class="frame-bg-options">
-                      <button class="fbg-opt" data-fbg="color:#FFF6EB" style="background:#FFF6EB" title="Cream"></button>
-                      <button class="fbg-opt" data-fbg="color:#FFFFFF" style="background:#FFF;border:1px solid #ddd" title="White"></button>
-                      <button class="fbg-opt" data-fbg="color:#B5A8D6" style="background:#B5A8D6" title="Light Purple"></button>
                       <button class="fbg-opt active" data-fbg="color:#8070B6" style="background:#8070B6" title="Purple"></button>
-                      <button class="fbg-opt" data-fbg="color:#222222" style="background:#222" title="Dark"></button>
+                      <button class="fbg-opt" data-fbg="color:#FFFFFF" style="background:#FFF;border:1px solid #ddd" title="White"></button>
                       <input type="color" id="fbgColorPicker" class="fbg-color-rainbow" value="#8070B6" title="Custom color" />
                       <input type="file" id="fbgImageUpload" accept="image/*" style="display:none" />
                       <button class="fbg-opt fbg-upload-btn" title="Upload background image">&#128247;</button>
                     </div>
+                    <div class="frame-bg-options" style="margin-top:6px">
+                      <button class="fbg-opt fbg-img-opt" data-fbg="image:/assets/background/Pink-gradient.png" title="Pink Gradient"><img src="/assets/background/Pink-gradient.png" alt="Pink"></button>
+                      <button class="fbg-opt fbg-img-opt" data-fbg="image:/assets/background/Purple-gradient.png" title="Purple Gradient"><img src="/assets/background/Purple-gradient.png" alt="Purple"></button>
+                      <button class="fbg-opt fbg-img-opt" data-fbg="image:/assets/background/Bee.png" title="Bee"><img src="/assets/background/Bee.png" alt="Bee"></button>
+                      <button class="fbg-opt fbg-img-opt" data-fbg="image:/assets/background/Boston.png" title="Boston"><img src="/assets/background/Boston.png" alt="Boston"></button>
+                      <button class="fbg-opt fbg-img-opt" data-fbg="image:/assets/background/Comtam.png" title="Comtam"><img src="/assets/background/Comtam.png" alt="Comtam"></button>
+                      <button class="fbg-opt fbg-img-opt" data-fbg="image:/assets/background/Vietnam.png" title="Vietnam"><img src="/assets/background/Vietnam.png" alt="Vietnam"></button>
+                    </div>
+                  </div>
+                  <div class="settings-group" id="bgScaleGroup" style="display:none">
+                    <span class="settings-group-label">Background Size</span>
+                    <div class="frame-bg-mode-row">
+                      <button class="fbg-mode-btn active" data-bgmode="fit">Scale to Fit</button>
+                      <button class="fbg-mode-btn" data-bgmode="repeat">Repeat</button>
+                      <button class="fbg-mode-btn" data-bgmode="cover">Stretch</button>
+                    </div>
+                    <label class="frame-slider-label" id="bgScaleSliderLabel">
+                      Scale
+                      <input type="range" id="frameBgScaleSlider" min="5" max="100" value="100" class="frame-slider" />
+                    </label>
                   </div>
                   <div class="settings-group">
                     <span class="settings-group-label">Frame Border</span>
@@ -327,13 +363,6 @@
                     <label class="frame-slider-label">
                       Image Border Color
                       <input type="color" id="frameBorderColorPicker" value="#ffffff" class="fbg-color-picker" />
-                    </label>
-                  </div>
-                  <div class="settings-group" id="bgScaleGroup" style="display:none">
-                    <span class="settings-group-label">Background Size</span>
-                    <label class="frame-slider-label">
-                      Tile Scale
-                      <input type="range" id="frameBgScaleSlider" min="5" max="100" value="25" class="frame-slider" />
                     </label>
                   </div>
                   <div class="settings-group">
@@ -383,68 +412,64 @@
                   <button class="ratio-opt" data-ratio="3:4" title="Portrait">3:4</button>
                   <button class="ratio-opt" data-ratio="16:9" title="Widescreen">16:9</button>
                   <button class="ratio-opt" data-ratio="2:3" title="Classic portrait">2:3</button>
-                  <button class="ratio-opt active" data-ratio="4cut" title="4-Cut strip">4-Cut</button>
+                  <button class="ratio-opt active" data-ratio="4cut" title="Photobooth 2:6">Photobooth</button>
                 </div>
               </div>
             </div>
           </div>
 
         <div class="right-content">
-        <!-- Main canvas area -->
         <div class="right-main">
-
-          <!-- Canvas preview -->
-          <section class="canvas-section">
-            <div id="preview" class="canvas-preview">
-              <canvas id="canvas"></canvas>
-              <canvas id="decoCanvas"></canvas>
-              <!-- Floating delete button on selected decoration -->
-              <button id="floatingDecoDelete" class="floating-deco-delete" style="display:none" title="Delete decoration">&#128465;</button>
-              <!-- Floating text edit toolbar -->
-              <div id="floatingTextEdit" class="floating-text-edit" style="display:none">
-                <input type="color" id="decoTextColor" class="deco-text-color" value="#8B6B4A" title="Text color" />
-                <select id="decoTextFont" class="deco-text-font" title="Font">
-                  <option value="Baloo 2">Baloo 2</option>
-                  <option value="Inter">Inter</option>
-                  <option value="Georgia">Georgia</option>
-                  <option value="Courier New">Courier</option>
-                  <option value="Arial">Arial</option>
-                </select>
-                <select id="decoTextSize" class="deco-text-size" title="Size">
-                  <option value="12">12</option>
-                  <option value="16">16</option>
-                  <option value="18" selected>18</option>
-                  <option value="24">24</option>
-                  <option value="32">32</option>
-                  <option value="48">48</option>
-                </select>
-                <select id="decoTextWeight" class="deco-text-weight" title="Style">
-                  <option value="400">Regular</option>
-                  <option value="600" selected>Semi-Bold</option>
-                  <option value="700">Bold</option>
-                </select>
-                <input type="color" id="decoTextBg" class="deco-text-bg" value="#ffffff" title="Background" />
-                <label class="deco-text-bg-toggle" title="Toggle background">
-                  <input type="checkbox" id="decoTextBgToggle" />
-                  <span>BG</span>
-                </label>
-              </div>
-              <!-- Floating shape picker on selected photo -->
-              <div id="floatingShapePicker" class="floating-shape-picker" style="display:none">
-                <button class="fshape-opt active" data-shape="rounded" title="Rounded">&#9646;</button>
-                <button class="fshape-opt" data-shape="circle" title="Circle">&#9679;</button>
-                <button class="fshape-opt" data-shape="oval" title="Oval">&#11044;</button>
-                <button class="fshape-opt" data-shape="heart" title="Heart">&#10084;</button>
-                <button class="fshape-opt" data-shape="star" title="Star">&#9733;</button>
-                <button class="fshape-opt" data-shape="cloud" title="Cloud">&#9729;</button>
-                <button class="fshape-remove-btn" id="btnRemoveFromCanvas" title="Remove from canvas">&#128465;</button>
-              </div>
-            </div>
-          </section>
-
+        <!-- Canvas preview -->
+        <section class="canvas-section">
+          <div id="preview" class="canvas-preview">
+            <canvas id="canvas"></canvas>
+            <canvas id="decoCanvas"></canvas>
+          </div>
+          <!-- Floating UI elements (outside canvas-preview to avoid overflow:hidden clipping) -->
+          <button id="floatingDecoDelete" class="floating-deco-delete" style="display:none" title="Delete decoration">&#128465;</button>
+          <div id="floatingShapePicker" class="floating-shape-picker" style="display:none">
+            <button class="fshape-opt active" data-shape="rounded" title="Rounded">&#9646;</button>
+            <button class="fshape-opt" data-shape="circle" title="Circle">&#9679;</button>
+            <button class="fshape-opt" data-shape="oval" title="Oval">&#11044;</button>
+            <button class="fshape-opt" data-shape="heart" title="Heart">&#10084;</button>
+            <button class="fshape-opt" data-shape="star" title="Star">&#9733;</button>
+            <button class="fshape-opt" data-shape="cloud" title="Cloud">&#9729;</button>
+            <button class="fshape-remove-btn" id="btnRemoveFromCanvas" title="Remove from canvas">&#128465;</button>
+          </div>
+          <!-- Floating text edit toolbar -->
+          <div id="floatingTextEdit" class="floating-text-edit" style="display:none">
+            <input type="color" id="decoTextColor" class="deco-text-color" value="#8B6B4A" title="Text color" />
+            <select id="decoTextFont" class="deco-text-font" title="Font">
+              <option value="Baloo 2">Baloo 2</option>
+              <option value="Inter">Inter</option>
+              <option value="Georgia">Georgia</option>
+              <option value="Courier New">Courier</option>
+              <option value="Arial">Arial</option>
+            </select>
+            <select id="decoTextSize" class="deco-text-size" title="Size">
+              <option value="12">12</option>
+              <option value="16">16</option>
+              <option value="18" selected>18</option>
+              <option value="24">24</option>
+              <option value="32">32</option>
+              <option value="48">48</option>
+            </select>
+            <select id="decoTextWeight" class="deco-text-weight" title="Style">
+              <option value="400">Regular</option>
+              <option value="600" selected>Semi-Bold</option>
+              <option value="700">Bold</option>
+            </select>
+            <input type="color" id="decoTextBg" class="deco-text-bg" value="#ffffff" title="Background" />
+            <label class="deco-text-bg-toggle" title="Toggle background">
+              <input type="checkbox" id="decoTextBgToggle" />
+              <span>BG</span>
+            </label>
+          </div>
+        </section>
         </div>
 
-        <!-- Right sidebar: Photo Bank + Export -->
+        <!-- Right sidebar: Photo Bank + Export (desktop only, hidden on mobile) -->
         <aside class="right-sidebar">
           <div class="photo-bank-sidebar" id="photoBankSidebar">
             <div class="bank-header">
@@ -452,9 +477,10 @@
               <span id="photoCounter" class="photo-counter"></span>
             </div>
             <div id="thumbs" class="thumbs-row"></div>
+            <div id="bankScrollHint" class="bank-scroll-hint" style="display:none">&#9660;</div>
           </div>
           <div class="export-sidebar" id="exportSidebar">
-            <button id="finish" class="btn btn-primary btn-finish-main"><span class="step-badge step-badge-on-purple">Step 4</span><br>Export &amp; Share</button>
+            <button id="finish" class="btn btn-primary btn-finish-main"><span class="step-badge step-badge-on-purple">Step 3</span><br>Export &amp; Share</button>
             <div id="shareArea" class="share-area"></div>
           </div>
         </aside>
@@ -494,6 +520,16 @@
           </button>
         </div>
         <button id="exportModalClose" class="export-modal-close">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Photo Picker Popup (tap empty frame to add) -->
+    <div id="photoPickerSheet" class="photo-picker-overlay" style="display:none">
+      <div class="photo-picker-backdrop" id="bottomSheetBackdrop"></div>
+      <div class="photo-picker-popup">
+        <div class="photo-picker-title">Choose a Photo</div>
+        <div id="bottomSheetPhotos" class="photo-picker-grid"></div>
+        <button id="bottomSheetClose" class="btn btn-secondary photo-picker-close">Cancel</button>
       </div>
     </div>
 
