@@ -3909,9 +3909,12 @@ decoCanvas.addEventListener('dblclick', (e) => {
 
 // Click outside canvas to deselect photos and exit crop mode
 document.addEventListener('pointerdown', (e) => {
-  // Check if click is inside the canvas area (preview div or its children)
+  // Check if click is inside the canvas area or floating toolbars
   const preview = document.getElementById('preview');
-  if (preview && preview.contains(e.target)) return; // inside canvas area, handled by decoCanvas
+  if (preview && preview.contains(e.target)) return;
+  if (floatingShapePicker && floatingShapePicker.contains(e.target)) return;
+  if (floatingDecoDelete && floatingDecoDelete.contains(e.target)) return;
+  if (floatingTextEdit && floatingTextEdit.contains(e.target)) return;
 
   // Click is outside the canvas — deselect photo and exit crop
   let changed = false;
