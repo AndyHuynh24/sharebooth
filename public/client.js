@@ -48,7 +48,7 @@ let frameBgColor = '#8070B6';    // default purple (matches heart/accent)
 let frameBgImage = null;         // Image element
 let frameBgImageUrl = null;      // URL or base64 of current bg image (for socket sync)
 let frameBgScale = 1.0;          // tile size as fraction of canvas width
-let frameBgMode = 'fit';         // 'fit' | 'repeat' | 'cover'
+let frameBgMode = 'cover';       // 'fit' | 'repeat' | 'cover'
 
 // Frame shape (defaults — applied to new photos, or overridden per-photo)
 let frameShapeDefault = 'rounded';  // default for new photos
