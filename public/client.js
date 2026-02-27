@@ -3709,6 +3709,7 @@ document.querySelectorAll('.fbg-opt').forEach(btn => {
         frameBgType = 'image';
         updateBgScaleVisibility();
         render();
+        if (sessionCode) socket.emit('frame-bg-change', { code: sessionCode, bgType: 'image', bgImageUrl: src });
       };
       img.src = src;
     }
@@ -3775,6 +3776,7 @@ document.getElementById('fbgImageUpload').addEventListener('change', e => {
       document.querySelector('.fbg-upload-btn').classList.add('active');
       updateBgScaleVisibility();
       render();
+      if (sessionCode) socket.emit('frame-bg-change', { code: sessionCode, bgType: 'image', bgImageUrl: reader.result });
     };
     img.src = reader.result;
   };
@@ -3782,20 +3784,7 @@ document.getElementById('fbgImageUpload').addEventListener('change', e => {
 });
 
 // Frame BG socket events
-socket.on('frame-bg-change', ({ bgType, bgColor }) => {
-  if (bgType === 'color' && bgColor) {
-    frameBgType = 'color';
-    frameBgColor = bgColor;
-    frameBgImage = null;
-    // Update UI
-    document.querySelectorAll('.fbg-opt').forEach(b => {
-      b.classList.toggle('active', b.dataset.fbg === 'color:' + bgColor);
-    });
-    updateBgScaleVisibility();
-    render();
-  }
-});
-socket.on('frame-bg-sync', ({ bgType, bgColor }) => {
+function applyFrameBgFromSocket({ bgType, bgColor, bgImageUrl }) {
   if (bgType === 'color' && bgColor) {
     frameBgType = 'color';
     frameBgColor = bgColor;
@@ -3805,8 +3794,23 @@ socket.on('frame-bg-sync', ({ bgType, bgColor }) => {
     });
     updateBgScaleVisibility();
     render();
+  } else if (bgType === 'image' && bgImageUrl) {
+    const img = new Image();
+    img.onload = () => {
+      frameBgImage = img;
+      frameBgType = 'image';
+      // Update UI — highlight matching preset or upload button
+      document.querySelectorAll('.fbg-opt').forEach(b => {
+        b.classList.toggle('active', b.dataset.fbg === 'image:' + bgImageUrl);
+      });
+      updateBgScaleVisibility();
+      render();
+    };
+    img.src = bgImageUrl;
   }
-});
+}
+socket.on('frame-bg-change', applyFrameBgFromSocket);
+socket.on('frame-bg-sync', applyFrameBgFromSocket);
 
 // Frame border sync
 socket.on('frame-border-change', ({ width, radius, color }) => {

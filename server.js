@@ -107,7 +107,8 @@ io.on('connection', socket => {
       socket.emit('prompt', { text: sessions[code].currentPrompt });
     }
     socket.emit('layout-sync', { layout: sessions[code].layout });
-    socket.emit('frame-bg-sync', sessions[code].frameBg);
+    const fb = sessions[code].frameBg;
+    socket.emit('frame-bg-sync', { bgType: fb.type, bgColor: fb.color, bgImageUrl: fb.imageUrl });
     if (sessions[code].frameBorder) {
       socket.emit('frame-border-change', sessions[code].frameBorder);
     }
@@ -198,10 +199,10 @@ io.on('connection', socket => {
   });
 
   // Frame background
-  socket.on('frame-bg-change', ({ code, bgType, bgColor }) => {
+  socket.on('frame-bg-change', ({ code, bgType, bgColor, bgImageUrl }) => {
     if (!sessions[code]) return;
-    sessions[code].frameBg = { type: bgType, color: bgColor };
-    socket.to(code).emit('frame-bg-change', { bgType, bgColor });
+    sessions[code].frameBg = { type: bgType, color: bgColor, imageUrl: bgImageUrl };
+    socket.to(code).emit('frame-bg-change', { bgType, bgColor, bgImageUrl });
   });
 
   // Frame border sync
