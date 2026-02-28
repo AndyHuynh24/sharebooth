@@ -4025,21 +4025,21 @@ const tutorialSteps = [
   },
   {
     target: 'rmbgSection',
-    label: 'Step 1b',
+    label: 'Step 2',
     title: 'Remove your background',
     desc: 'Not together? Erase your BG to join the same photo.',
     position: 'right'
   },
   {
     target: 'photoBankSidebar',
-    label: 'Step 2',
+    label: 'Step 3',
     title: 'Drag photos to the canvas',
     desc: 'Your snapped photos appear here. Drag them into the frame slots.',
     position: 'left'
   },
   {
     target: 'decoDialSection',
-    label: 'Step 3',
+    label: 'Step 4',
     title: 'Add stickers & text!',
     desc: 'Drop emojis, stickers, or custom text onto your photo.',
     position: 'right',
@@ -4047,7 +4047,7 @@ const tutorialSteps = [
   },
   {
     target: 'customSection',
-    label: 'Step 4',
+    label: 'Step 5',
     title: 'Customize your frame',
     desc: 'Change background, border color, width, and more.',
     position: 'left',
@@ -4055,14 +4055,14 @@ const tutorialSteps = [
   },
   {
     target: ['layoutDropdown', 'ratioDropdown'],
-    label: 'Step 5',
+    label: 'Step 6',
     title: 'Layout & ratio',
     desc: 'Switch layout or aspect ratio anytime!',
     position: 'bottom'
   },
   {
     target: 'finish',
-    label: 'Step 6',
+    label: 'Step 7',
     title: 'Export & share!',
     desc: 'Done? Save your creation here.',
     position: 'top'
