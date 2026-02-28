@@ -155,53 +155,53 @@ const LAYOUTS = {
     aspectRatio: 2 / 3,
     slots: [
       { x: 0.05, y: 0.08, w: 0.90, h: 0.42 },
-      { x: 0.05, y: 0.51, w: 0.90, h: 0.42 },
+      { x: 0.05, y: 0.512, w: 0.90, h: 0.42 },
     ]
   },
   'strip3': {
     aspectRatio: 1 / 2.5,
     slots: [
       { x: 0.05, y: 0.07, w: 0.90, h: 0.27 },
-      { x: 0.05, y: 0.35, w: 0.90, h: 0.27 },
-      { x: 0.05, y: 0.63, w: 0.90, h: 0.27 },
+      { x: 0.05, y: 0.352, w: 0.90, h: 0.27 },
+      { x: 0.05, y: 0.634, w: 0.90, h: 0.27 },
     ]
   },
   'strip': {
     aspectRatio: 1 / 3,
     slots: [
       { x: 0.05, y: 0.06, w: 0.90, h: 0.21 },
-      { x: 0.05, y: 0.28, w: 0.90, h: 0.21 },
-      { x: 0.05, y: 0.50, w: 0.90, h: 0.21 },
-      { x: 0.05, y: 0.72, w: 0.90, h: 0.21 },
+      { x: 0.05, y: 0.282, w: 0.90, h: 0.21 },
+      { x: 0.05, y: 0.504, w: 0.90, h: 0.21 },
+      { x: 0.05, y: 0.726, w: 0.90, h: 0.21 },
     ]
   },
   '2x2': {
     aspectRatio: 3 / 4,
     slots: [
       { x: 0.05, y: 0.08, w: 0.44, h: 0.42 },
-      { x: 0.51, y: 0.08, w: 0.44, h: 0.42 },
-      { x: 0.05, y: 0.51, w: 0.44, h: 0.42 },
-      { x: 0.51, y: 0.51, w: 0.44, h: 0.42 },
+      { x: 0.512, y: 0.08, w: 0.44, h: 0.42 },
+      { x: 0.05, y: 0.512, w: 0.44, h: 0.42 },
+      { x: 0.512, y: 0.512, w: 0.44, h: 0.42 },
     ]
   },
   '6cut': {
     aspectRatio: 2 / 3,
     slots: [
       { x: 0.05, y: 0.07, w: 0.44, h: 0.27 },
-      { x: 0.51, y: 0.07, w: 0.44, h: 0.27 },
-      { x: 0.05, y: 0.35, w: 0.44, h: 0.27 },
-      { x: 0.51, y: 0.35, w: 0.44, h: 0.27 },
-      { x: 0.05, y: 0.63, w: 0.44, h: 0.27 },
-      { x: 0.51, y: 0.63, w: 0.44, h: 0.27 },
+      { x: 0.512, y: 0.07, w: 0.44, h: 0.27 },
+      { x: 0.05, y: 0.352, w: 0.44, h: 0.27 },
+      { x: 0.512, y: 0.352, w: 0.44, h: 0.27 },
+      { x: 0.05, y: 0.634, w: 0.44, h: 0.27 },
+      { x: 0.512, y: 0.634, w: 0.44, h: 0.27 },
     ]
   },
   '1big3': {
     aspectRatio: 4 / 3,
     slots: [
       { x: 0.05, y: 0.08, w: 0.55, h: 0.80 },
-      { x: 0.61, y: 0.08, w: 0.34, h: 0.26 },
-      { x: 0.61, y: 0.35, w: 0.34, h: 0.26 },
-      { x: 0.61, y: 0.62, w: 0.34, h: 0.26 },
+      { x: 0.612, y: 0.08, w: 0.34, h: 0.26 },
+      { x: 0.612, y: 0.352, w: 0.34, h: 0.26 },
+      { x: 0.612, y: 0.624, w: 0.34, h: 0.26 },
     ]
   },
   'freeform': {
@@ -3263,12 +3263,14 @@ function enableBgRemoval() {
   bgRemovalEnabled = true;
   virtualBgEnabled = true;
   document.getElementById('bgRemoveToggle').checked = true;
+  document.getElementById('rmbgLiveHint').style.display = '';
   startLivePreview();
 }
 
 // Background removal enable/disable toggle
 document.getElementById('bgRemoveToggle').addEventListener('change', e => {
   bgRemovalEnabled = e.target.checked;
+  document.getElementById('rmbgLiveHint').style.display = bgRemovalEnabled ? '' : 'none';
   if (bgRemovalEnabled) {
     virtualBgEnabled = true;
     startLivePreview();

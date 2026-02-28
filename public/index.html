@@ -122,12 +122,8 @@
       </div>
       <div class="topbar-right">
         <span class="session-code" id="sessionCodeDisplay">----</span>
-        <button id="btnCopyLink" class="btn btn-icon btn-share" title="Share link">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-            <polyline points="16 6 12 2 8 6"/>
-            <line x1="12" y1="2" x2="12" y2="15"/>
-          </svg>
+        <button id="btnCopyLink" class="btn btn-share-link" title="Share link">
+          <i class="bx bx-link"></i> Share Link
         </button>
         <span class="participant-count" id="participantCount">0</span>
       </div>
@@ -172,6 +168,9 @@
                 <span>Advanced background removal is processing, please wait...</span>
               </div>
             </div>
+          </div>
+          <div id="rmbgLiveHint" class="rmbg-live-hint" style="display:none">
+            Live preview uses fast BG removal — your final photo will have ultra-clean edges.
           </div>
           <div class="camera-controls">
             <section class="rmbg-section" id="rmbgSection">
@@ -514,9 +513,14 @@
         <p class="export-modal-subtitle">Save as image</p>
         <div class="export-modal-options">
           <button id="exportModalPng" class="export-modal-opt">
-            <span class="export-modal-opt-icon">&#128248;</span>
+            <span class="export-modal-opt-icon"><i class="bx bx-image"></i></span>
             <span class="export-modal-opt-label">PNG</span>
             <span class="export-modal-opt-desc">High quality image</span>
+          </button>
+          <button class="export-modal-opt export-modal-opt--disabled" disabled>
+            <span class="export-modal-opt-icon"><i class="bx bx-video"></i></span>
+            <span class="export-modal-opt-label">Video</span>
+            <span class="export-modal-opt-desc">Coming soon</span>
           </button>
         </div>
         <button id="exportModalClose" class="export-modal-close">Cancel</button>
