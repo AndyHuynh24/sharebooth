@@ -1227,18 +1227,18 @@ html, body {
 .tutorial-overlay {
   position: fixed;
   inset: 0;
-  z-index: 9000;
+  z-index: 100000;
   pointer-events: none;
 }
 .tutorial-backdrop {
   position: fixed;
   inset: 0;
   pointer-events: auto;
-  z-index: 9000;
+  z-index: 100000;
 }
 .tutorial-spotlight {
   position: fixed;
-  z-index: 9001;
+  z-index: 100001;
   border-radius: var(--radius-md);
   box-shadow: 0 0 0 9999px rgba(0,0,0,0.65);
   pointer-events: none;
@@ -1246,7 +1246,7 @@ html, body {
 }
 .tutorial-tooltip {
   position: fixed;
-  z-index: 9010;
+  z-index: 100010;
   background: var(--white);
   border-radius: var(--radius-lg);
   padding: 24px 28px 18px;
@@ -1341,7 +1341,7 @@ html, body {
 /* Ensure auto-opened panels during tutorial show above the dark overlay */
 body.tutorial-active .canvas-pickers {
   position: relative;
-  z-index: 9002;
+  z-index: 100002;
 }
 
 /* ===== Export Modal ===== */
