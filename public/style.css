@@ -1338,8 +1338,8 @@ html, body {
 .tutorial-skip-btn:hover {
   color: var(--brown);
 }
-/* Ensure auto-opened panels during tutorial show above the dark overlay */
-body.tutorial-active .canvas-pickers {
+/* Elevated z-index for canvas-pickers only when tutorial spotlights them */
+body.tutorial-active .canvas-pickers.tutorial-elevated {
   position: relative;
   z-index: 100002;
 }

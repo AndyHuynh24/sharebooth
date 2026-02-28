@@ -4105,6 +4105,8 @@ function endTutorial() {
   if (tutorialSpotlight2) tutorialSpotlight2.style.display = 'none';
   // Close any panels that were opened during tutorial
   closeAllPickers();
+  const cp = document.querySelector('.canvas-pickers');
+  if (cp) cp.classList.remove('tutorial-elevated');
 }
 
 function positionTutorialSpotlightAndTooltip() {
@@ -4194,6 +4196,17 @@ function showTutorialStep() {
   // Close any previously opened panels
   closeAllPickers();
 
+  // Elevate .canvas-pickers only when the current step targets something inside it
+  const canvasPickers = document.querySelector('.canvas-pickers');
+  if (canvasPickers) {
+    const targets = Array.isArray(step.target) ? step.target : [step.target];
+    const needsElevation = targets.some(id => {
+      const el = document.getElementById(id);
+      return el && canvasPickers.contains(el);
+    });
+    canvasPickers.classList.toggle('tutorial-elevated', needsElevation);
+  }
+
   // Get target element(s)
   const targets = Array.isArray(step.target) ? step.target : [step.target];
   const elements = targets.map(id => document.getElementById(id)).filter(Boolean);
@@ -4202,17 +4215,24 @@ function showTutorialStep() {
   // Scroll element into view if needed
   elements[0].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 
-  // Initial position (before panel opens)
-  positionTutorialSpotlightAndTooltip();
+  const tooltip = document.getElementById('tutorialTooltip');
 
-  // Auto-open a panel if needed, then reposition after it renders
+  // Auto-open a panel if needed — hide tooltip until panel is open to prevent jump
   if (step.autoOpen) {
+    tooltip.style.visibility = 'hidden';
+    positionTutorialSpotlightAndTooltip();
     setTimeout(() => {
       const btn = document.getElementById(step.autoOpen);
       if (btn) btn.click();
-      // Reposition after panel renders
-      setTimeout(() => positionTutorialSpotlightAndTooltip(), 50);
+      // Reposition and show tooltip after panel renders
+      setTimeout(() => {
+        positionTutorialSpotlightAndTooltip();
+        tooltip.style.visibility = '';
+      }, 80);
     }, 150);
+  } else {
+    tooltip.style.visibility = '';
+    positionTutorialSpotlightAndTooltip();
   }
 
   // Fill content
