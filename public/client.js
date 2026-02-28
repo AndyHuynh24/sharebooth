@@ -4050,7 +4050,7 @@ const tutorialSteps = [
     label: 'Step 5',
     title: 'Customize your frame',
     desc: 'Change background, border color, width, and more.',
-    position: 'left',
+    position: 'right',
     autoOpen: 'btnSettings'
   },
   {
