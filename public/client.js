@@ -53,7 +53,7 @@ let frameBgMode = 'cover';       // 'fit' | 'repeat' | 'cover'
 // Frame shape (defaults — applied to new photos, or overridden per-photo)
 let frameShapeDefault = 'rounded';  // default for new photos
 let frameBorderWidth = 0;
-let frameBorderRadius = 4;
+let frameBorderRadius = 0;
 let frameBorderColor = '#ffffff'; // default border color
 let selectedPhotoIndex = -1;     // which photo is selected for per-photo shape editing
 
@@ -149,59 +149,59 @@ let countdownInterval = null;
 
 // ===== Layout Definitions =====
 // All layouts use consistent spacing:
-// edge padding = 0.02, gap between photos = 0.02, top reserved for branding = 0.06
+// edge padding = 0.05, gap between photos = 0.01, top = 0.07, bottom margin visible
 const LAYOUTS = {
   '2cut': {
     aspectRatio: 2 / 3,
     slots: [
-      { x: 0.02, y: 0.06, w: 0.96, h: 0.45 },
-      { x: 0.02, y: 0.53, w: 0.96, h: 0.45 },
+      { x: 0.05, y: 0.07, w: 0.90, h: 0.42 },
+      { x: 0.05, y: 0.50, w: 0.90, h: 0.42 },
     ]
   },
   'strip3': {
     aspectRatio: 1 / 2.5,
     slots: [
-      { x: 0.02, y: 0.05, w: 0.96, h: 0.30 },
-      { x: 0.02, y: 0.37, w: 0.96, h: 0.30 },
-      { x: 0.02, y: 0.69, w: 0.96, h: 0.30 },
+      { x: 0.05, y: 0.06, w: 0.90, h: 0.28 },
+      { x: 0.05, y: 0.35, w: 0.90, h: 0.28 },
+      { x: 0.05, y: 0.64, w: 0.90, h: 0.28 },
     ]
   },
   'strip': {
     aspectRatio: 1 / 3,
     slots: [
-      { x: 0.02, y: 0.05, w: 0.96, h: 0.22 },
-      { x: 0.02, y: 0.29, w: 0.96, h: 0.22 },
-      { x: 0.02, y: 0.53, w: 0.96, h: 0.22 },
-      { x: 0.02, y: 0.77, w: 0.96, h: 0.22 },
+      { x: 0.05, y: 0.05, w: 0.90, h: 0.21 },
+      { x: 0.05, y: 0.27, w: 0.90, h: 0.21 },
+      { x: 0.05, y: 0.49, w: 0.90, h: 0.21 },
+      { x: 0.05, y: 0.71, w: 0.90, h: 0.21 },
     ]
   },
   '2x2': {
     aspectRatio: 3 / 4,
     slots: [
-      { x: 0.02, y: 0.06, w: 0.47, h: 0.44 },
-      { x: 0.51, y: 0.06, w: 0.47, h: 0.44 },
-      { x: 0.02, y: 0.52, w: 0.47, h: 0.44 },
-      { x: 0.51, y: 0.52, w: 0.47, h: 0.44 },
+      { x: 0.05, y: 0.07, w: 0.44, h: 0.42 },
+      { x: 0.51, y: 0.07, w: 0.44, h: 0.42 },
+      { x: 0.05, y: 0.50, w: 0.44, h: 0.42 },
+      { x: 0.51, y: 0.50, w: 0.44, h: 0.42 },
     ]
   },
   '6cut': {
     aspectRatio: 2 / 3,
     slots: [
-      { x: 0.02, y: 0.05, w: 0.47, h: 0.30 },
-      { x: 0.51, y: 0.05, w: 0.47, h: 0.30 },
-      { x: 0.02, y: 0.37, w: 0.47, h: 0.30 },
-      { x: 0.51, y: 0.37, w: 0.47, h: 0.30 },
-      { x: 0.02, y: 0.69, w: 0.47, h: 0.30 },
-      { x: 0.51, y: 0.69, w: 0.47, h: 0.30 },
+      { x: 0.05, y: 0.06, w: 0.44, h: 0.28 },
+      { x: 0.51, y: 0.06, w: 0.44, h: 0.28 },
+      { x: 0.05, y: 0.35, w: 0.44, h: 0.28 },
+      { x: 0.51, y: 0.35, w: 0.44, h: 0.28 },
+      { x: 0.05, y: 0.64, w: 0.44, h: 0.28 },
+      { x: 0.51, y: 0.64, w: 0.44, h: 0.28 },
     ]
   },
   '1big3': {
     aspectRatio: 4 / 3,
     slots: [
-      { x: 0.02, y: 0.06, w: 0.58, h: 0.92 },
-      { x: 0.62, y: 0.06, w: 0.36, h: 0.29 },
-      { x: 0.62, y: 0.37, w: 0.36, h: 0.29 },
-      { x: 0.62, y: 0.69, w: 0.36, h: 0.29 },
+      { x: 0.05, y: 0.07, w: 0.54, h: 0.86 },
+      { x: 0.61, y: 0.07, w: 0.34, h: 0.28 },
+      { x: 0.61, y: 0.36, w: 0.34, h: 0.28 },
+      { x: 0.61, y: 0.65, w: 0.34, h: 0.28 },
     ]
   },
   'freeform': {
