@@ -4042,7 +4042,6 @@ const tutorialSteps = [
     label: 'Step 4',
     title: 'Add stickers & text!',
     desc: 'Drop emojis, stickers, or custom text onto your photo.',
-    position: 'right',
     autoOpen: 'decoDialToggle'
   },
   {
@@ -4050,7 +4049,7 @@ const tutorialSteps = [
     label: 'Step 5',
     title: 'Customize your frame',
     desc: 'Change background, border color, width, and more.',
-    position: 'right',
+    position: 'right-center',
     autoOpen: 'btnSettings'
   },
   {
@@ -4153,6 +4152,14 @@ function positionTutorialSpotlightAndTooltip() {
     // Place tooltip below the entire spotlight (button + opened panel)
     tipX = minX + (maxX - minX) / 2 - tipW / 2;
     tipY = maxY + pad + 16;
+  } else if (pos === 'right-center') {
+    // Place tooltip to the right, vertically centered with the spotlight
+    tipX = maxX + pad + 16;
+    tipY = minY + (maxY - minY) / 2 - 80;
+    if (tipX + tipW > window.innerWidth - 16) {
+      tipX = minX;
+      tipY = maxY + pad + 16;
+    }
   } else if (pos === 'right') {
     tipX = maxX + pad + 16;
     tipY = minY;
