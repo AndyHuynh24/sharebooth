@@ -4031,11 +4031,11 @@ const tutorialSteps = [
     position: 'right'
   },
   {
-    target: 'preview',
+    target: 'photoBankSidebar',
     label: 'Step 2',
-    title: 'Tap empty slots to add photos',
-    desc: 'After snapping, tap any empty frame slot to pick a photo.',
-    position: 'bottom'
+    title: 'Drag photos to the canvas',
+    desc: 'Your snapped photos appear here. Drag them into the frame slots.',
+    position: 'left'
   },
   {
     target: 'decoDialSection',
@@ -4047,7 +4047,7 @@ const tutorialSteps = [
   },
   {
     target: 'customSection',
-    label: 'Step 3',
+    label: 'Step 4',
     title: 'Customize your frame',
     desc: 'Change background, border color, width, and more.',
     position: 'left',
@@ -4055,14 +4055,14 @@ const tutorialSteps = [
   },
   {
     target: ['layoutDropdown', 'ratioDropdown'],
-    label: 'Step 3',
+    label: 'Step 5',
     title: 'Layout & ratio',
     desc: 'Switch layout or aspect ratio anytime!',
     position: 'bottom'
   },
   {
     target: 'finish',
-    label: 'Step 3',
+    label: 'Step 6',
     title: 'Export & share!',
     desc: 'Done? Save your creation here.',
     position: 'top'
