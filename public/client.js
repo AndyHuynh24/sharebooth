@@ -52,7 +52,7 @@ let frameBgMode = 'cover';       // 'fit' | 'repeat' | 'cover'
 
 // Frame shape (defaults — applied to new photos, or overridden per-photo)
 let frameShapeDefault = 'rounded';  // default for new photos
-let frameBorderWidth = 4;
+let frameBorderWidth = 0;
 let frameBorderRadius = 4;
 let frameBorderColor = '#ffffff'; // default border color
 let selectedPhotoIndex = -1;     // which photo is selected for per-photo shape editing
@@ -149,60 +149,59 @@ let countdownInterval = null;
 
 // ===== Layout Definitions =====
 // All layouts use consistent spacing:
-// edge padding = 0.04, gap between photos = 0.03, top reserved for branding = 0.07
-// Max border width slider capped at 5 so borders never exceed half the gap.
+// edge padding = 0.02, gap between photos = 0.02, top reserved for branding = 0.06
 const LAYOUTS = {
   '2cut': {
     aspectRatio: 2 / 3,
     slots: [
-      { x: 0.04, y: 0.08, w: 0.92, h: 0.43 },
-      { x: 0.04, y: 0.54, w: 0.92, h: 0.43 },
+      { x: 0.02, y: 0.06, w: 0.96, h: 0.45 },
+      { x: 0.02, y: 0.53, w: 0.96, h: 0.45 },
     ]
   },
   'strip3': {
     aspectRatio: 1 / 2.5,
     slots: [
-      { x: 0.04, y: 0.07, w: 0.92, h: 0.28 },
-      { x: 0.04, y: 0.38, w: 0.92, h: 0.28 },
-      { x: 0.04, y: 0.69, w: 0.92, h: 0.28 },
+      { x: 0.02, y: 0.05, w: 0.96, h: 0.30 },
+      { x: 0.02, y: 0.37, w: 0.96, h: 0.30 },
+      { x: 0.02, y: 0.69, w: 0.96, h: 0.30 },
     ]
   },
   'strip': {
     aspectRatio: 1 / 3,
     slots: [
-      { x: 0.04, y: 0.06, w: 0.92, h: 0.20 },
-      { x: 0.04, y: 0.29, w: 0.92, h: 0.20 },
-      { x: 0.04, y: 0.52, w: 0.92, h: 0.20 },
-      { x: 0.04, y: 0.75, w: 0.92, h: 0.20 },
+      { x: 0.02, y: 0.05, w: 0.96, h: 0.22 },
+      { x: 0.02, y: 0.29, w: 0.96, h: 0.22 },
+      { x: 0.02, y: 0.53, w: 0.96, h: 0.22 },
+      { x: 0.02, y: 0.77, w: 0.96, h: 0.22 },
     ]
   },
   '2x2': {
     aspectRatio: 3 / 4,
     slots: [
-      { x: 0.04, y: 0.08, w: 0.45, h: 0.42 },
-      { x: 0.52, y: 0.08, w: 0.45, h: 0.42 },
-      { x: 0.04, y: 0.53, w: 0.45, h: 0.42 },
-      { x: 0.52, y: 0.53, w: 0.45, h: 0.42 },
+      { x: 0.02, y: 0.06, w: 0.47, h: 0.44 },
+      { x: 0.51, y: 0.06, w: 0.47, h: 0.44 },
+      { x: 0.02, y: 0.52, w: 0.47, h: 0.44 },
+      { x: 0.51, y: 0.52, w: 0.47, h: 0.44 },
     ]
   },
   '6cut': {
     aspectRatio: 2 / 3,
     slots: [
-      { x: 0.04, y: 0.07, w: 0.45, h: 0.28 },
-      { x: 0.52, y: 0.07, w: 0.45, h: 0.28 },
-      { x: 0.04, y: 0.38, w: 0.45, h: 0.28 },
-      { x: 0.52, y: 0.38, w: 0.45, h: 0.28 },
-      { x: 0.04, y: 0.69, w: 0.45, h: 0.28 },
-      { x: 0.52, y: 0.69, w: 0.45, h: 0.28 },
+      { x: 0.02, y: 0.05, w: 0.47, h: 0.30 },
+      { x: 0.51, y: 0.05, w: 0.47, h: 0.30 },
+      { x: 0.02, y: 0.37, w: 0.47, h: 0.30 },
+      { x: 0.51, y: 0.37, w: 0.47, h: 0.30 },
+      { x: 0.02, y: 0.69, w: 0.47, h: 0.30 },
+      { x: 0.51, y: 0.69, w: 0.47, h: 0.30 },
     ]
   },
   '1big3': {
     aspectRatio: 4 / 3,
     slots: [
-      { x: 0.04, y: 0.08, w: 0.56, h: 0.88 },
-      { x: 0.63, y: 0.08, w: 0.34, h: 0.27 },
-      { x: 0.63, y: 0.38, w: 0.34, h: 0.27 },
-      { x: 0.63, y: 0.69, w: 0.34, h: 0.27 },
+      { x: 0.02, y: 0.06, w: 0.58, h: 0.92 },
+      { x: 0.62, y: 0.06, w: 0.36, h: 0.29 },
+      { x: 0.62, y: 0.37, w: 0.36, h: 0.29 },
+      { x: 0.62, y: 0.69, w: 0.36, h: 0.29 },
     ]
   },
   'freeform': {
@@ -1114,8 +1113,8 @@ function getLayoutSlots(cw, ch, photoCount) {
 
 function computeFreeformSlots(cw, ch, count) {
   const d = devicePixelRatioVal;
-  const bw = frameBorderWidth * d; // account for border width
-  const margin = Math.max(24 * d, bw * 2 + 12 * d); // gap includes border space
+  const bw = frameBorderWidth * d;
+  const margin = Math.max(12 * d, bw + 8 * d); // tighter gap
   const cols = Math.min(3, Math.max(1, Math.floor((cw - margin) / (240 * d))));
   const thumbW = Math.min(300 * d, Math.floor((cw - margin * (cols + 1)) / cols));
   const thumbH = Math.round(thumbW * 0.75);
@@ -1370,7 +1369,6 @@ function drawPolaroid(img, x, y, w, h, rotation, layer, time, index) {
   const isFreeform = (currentLayout === 'freeform');
   const bw = isFreeform ? 0 : frameBorderWidth * d;
   const br = isFreeform ? 0 : frameBorderRadius * d;
-  const borderBottom = bw; // consistent border on all sides
   const shape = layer.shape || frameShapeDefault;
 
   ctx.save();
@@ -1378,7 +1376,7 @@ function drawPolaroid(img, x, y, w, h, rotation, layer, time, index) {
   ctx.rotate(rotation);
 
   const borderCol = layer.borderColor || frameBorderColor;
-  const hw = w / 2, hh = h / 2; // half-width, half-height for maximized bounding box
+  const hw = w / 2, hh = h / 2; // half-width, half-height (full slot)
 
   if (!isFreeform) {
     // Shadow
@@ -1387,79 +1385,66 @@ function drawPolaroid(img, x, y, w, h, rotation, layer, time, index) {
     ctx.shadowOffsetY = 3 * d;
   }
 
-  // Draw frame border (shape-aware) — skip in freeform
-  if (!isFreeform) {
-  if (shape === 'circle') {
-    const r = Math.min(hw, hh) + bw;
-    ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
-    ctx.fillStyle = borderCol;
-    ctx.fill();
-  } else if (shape === 'oval') {
-    drawOvalPath(ctx, 0, 0, hw + bw, hh + bw);
-    ctx.fillStyle = borderCol;
-    ctx.fill();
-  } else if (shape === 'heart') {
-    drawHeartPath(ctx, 0, 0, hw + bw, hh + bw);
-    ctx.fillStyle = borderCol;
-    ctx.fill();
-  } else if (shape === 'star') {
-    drawStarPath(ctx, 0, 0, hw + bw, hh + bw, 5);
-    ctx.fillStyle = borderCol;
-    ctx.fill();
-  } else if (shape === 'cloud') {
-    drawCloudPath(ctx, 0, 0, hw + bw, hh + bw);
-    ctx.fillStyle = borderCol;
-    ctx.fill();
-  } else {
-    const frameX = -hw - bw;
-    const frameY = -hh - bw;
-    const frameW = w + bw * 2;
-    const frameH = h + bw + borderBottom;
-    roundRect(ctx, frameX, frameY, frameW, frameH, br);
+  // Draw border fill at full slot size (inner border — image is inset by bw)
+  if (!isFreeform && bw > 0) {
+    if (shape === 'circle') {
+      const r = Math.min(hw, hh);
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2);
+    } else if (shape === 'oval') {
+      drawOvalPath(ctx, 0, 0, hw, hh);
+    } else if (shape === 'heart') {
+      drawHeartPath(ctx, 0, 0, hw, hh);
+    } else if (shape === 'star') {
+      drawStarPath(ctx, 0, 0, hw, hh, 5);
+    } else if (shape === 'cloud') {
+      drawCloudPath(ctx, 0, 0, hw, hh);
+    } else {
+      roundRect(ctx, -hw, -hh, w, h, br);
+    }
     ctx.fillStyle = borderCol;
     ctx.fill();
   }
-  } // end if (!isFreeform) border
 
   ctx.shadowColor = 'transparent';
 
+  // Image area is inset by border width
+  const ihw = hw - bw, ihh = hh - bw; // inset half-width/height
+  const iw = w - bw * 2, ih = h - bw * 2;
+
   // Clip & draw image (shape-aware, with crop support)
   const hasCrop = layer.cropX || layer.cropY || (layer.cropScale && layer.cropScale !== 1);
-  const drawImg = (img) => hasCrop ? drawImageCoverCropped(ctx, img, -hw, -hh, w, h, layer) : drawImageCover(ctx, img, -hw, -hh, w, h);
+  const drawImg = (img) => hasCrop ? drawImageCoverCropped(ctx, img, -ihw, -ihh, iw, ih, layer) : drawImageCover(ctx, img, -ihw, -ihh, iw, ih);
   ctx.save();
   if (shape === 'circle') {
-    const r = Math.min(hw, hh);
-    ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
-    ctx.clip();
-    if (img) drawImg(img);
-    else { ctx.fillStyle = '#eee'; ctx.fillRect(-hw, -hh, w, h); }
+    const r = Math.min(ihw, ihh);
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.clip();
+    if (img) drawImg(img); else { ctx.fillStyle = '#eee'; ctx.fillRect(-ihw, -ihh, iw, ih); }
   } else if (shape === 'oval') {
-    drawOvalPath(ctx, 0, 0, hw, hh);
-    ctx.clip();
-    if (img) drawImg(img);
-    else { ctx.fillStyle = '#eee'; ctx.fillRect(-hw, -hh, w, h); }
+    drawOvalPath(ctx, 0, 0, ihw, ihh); ctx.clip();
+    if (img) drawImg(img); else { ctx.fillStyle = '#eee'; ctx.fillRect(-ihw, -ihh, iw, ih); }
   } else if (shape === 'heart') {
-    drawHeartPath(ctx, 0, 0, hw, hh);
-    ctx.clip();
-    if (img) drawImg(img);
-    else { ctx.fillStyle = '#eee'; ctx.fillRect(-hw, -hh, w, h); }
+    drawHeartPath(ctx, 0, 0, ihw, ihh); ctx.clip();
+    if (img) drawImg(img); else { ctx.fillStyle = '#eee'; ctx.fillRect(-ihw, -ihh, iw, ih); }
   } else if (shape === 'star') {
-    drawStarPath(ctx, 0, 0, hw, hh, 5);
-    ctx.clip();
-    if (img) drawImg(img);
-    else { ctx.fillStyle = '#eee'; ctx.fillRect(-hw, -hh, w, h); }
+    drawStarPath(ctx, 0, 0, ihw, ihh, 5); ctx.clip();
+    if (img) drawImg(img); else { ctx.fillStyle = '#eee'; ctx.fillRect(-ihw, -ihh, iw, ih); }
   } else if (shape === 'cloud') {
-    drawCloudPath(ctx, 0, 0, hw, hh);
-    ctx.clip();
-    if (img) drawImg(img);
-    else { ctx.fillStyle = '#eee'; ctx.fillRect(-hw, -hh, w, h); }
+    drawCloudPath(ctx, 0, 0, ihw, ihh); ctx.clip();
+    if (img) drawImg(img); else { ctx.fillStyle = '#eee'; ctx.fillRect(-ihw, -ihh, iw, ih); }
   } else {
-    roundRect(ctx, -hw, -hh, w, h, Math.max(1, br - 2));
+    // No border: clip at full slot, with border: clip inset
+    if (bw > 0) {
+      roundRect(ctx, -ihw, -ihh, iw, ih, Math.max(1, br - bw));
+    } else {
+      roundRect(ctx, -hw, -hh, w, h, br);
+    }
     ctx.clip();
-    if (img) drawImg(img);
-    else { ctx.fillStyle = '#eee'; ctx.fillRect(-hw, -hh, w, h); }
+    if (bw > 0) {
+      if (img) drawImg(img); else { ctx.fillStyle = '#eee'; ctx.fillRect(-ihw, -ihh, iw, ih); }
+    } else {
+      if (img) { hasCrop ? drawImageCoverCropped(ctx, img, -hw, -hh, w, h, layer) : drawImageCover(ctx, img, -hw, -hh, w, h); }
+      else { ctx.fillStyle = '#eee'; ctx.fillRect(-hw, -hh, w, h); }
+    }
   }
   ctx.restore();
 
@@ -2054,7 +2039,7 @@ decoCanvas.addEventListener('pointerdown', (e) => {
       const deco = {
         id: generateId(), type: 'text', content: text,
         x: coords.x, y: coords.y, scale: 1, owner: getMyName(),
-        color: '#8B6B4A', fontSize: 18, fontFamily: 'Baloo 2', fontWeight: 600,
+        color: '#000000', fontSize: 18, fontFamily: 'Baloo 2', fontWeight: 600,
         rotation: 0, showBg: false, bgColor: '#ffffff'
       };
       decorations.push(deco);
