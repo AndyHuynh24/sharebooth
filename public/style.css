@@ -138,8 +138,8 @@ html, body {
 .btn-secondary { background: var(--white); color: var(--brown); border: 2px solid rgba(0,0,0,0.08); }
 .btn-accent { background: var(--pink); color: var(--white); font-size: 15px; padding: 10px 20px; border-radius: 20px; }
 .btn-icon { background: none; padding: 6px 8px; font-size: 16px; border: none; cursor: pointer; }
-.btn-share-link { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; font-size: 13px; font-weight: 600; border-radius: 8px; border: 1.5px solid var(--accent); background: var(--white); color: var(--accent); cursor: pointer; transition: background 0.2s, color 0.2s; font-family: inherit; }
-.btn-share-link:hover { background: var(--accent); color: var(--white); }
+.btn-share-link { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; font-size: 13px; font-weight: 600; border-radius: 20px; border: none; background: var(--heart); color: var(--white); cursor: pointer; transition: background 0.2s, box-shadow 0.2s, transform 0.15s; font-family: inherit; box-shadow: var(--shadow-sm); }
+.btn-share-link:hover { background: var(--brown); box-shadow: var(--shadow-md); transform: translateY(-1px); }
 .btn-share-link i { font-size: 15px; }
 .btn-sm { padding: 8px 16px; font-size: 13px; }
 .btn-share svg { vertical-align: middle; }
