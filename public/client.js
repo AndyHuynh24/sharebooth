@@ -4147,7 +4147,7 @@ function positionTutorialSpotlightAndTooltip() {
   const tooltip = document.getElementById('tutorialTooltip');
   const tipW = 360;
   let tipX, tipY;
-  const pos = step.autoOpen ? 'below-panel' : step.position;
+  const pos = step.position || (step.autoOpen ? 'below-panel' : 'bottom');
 
   if (pos === 'below-panel') {
     // Place tooltip below the entire spotlight (button + opened panel)
