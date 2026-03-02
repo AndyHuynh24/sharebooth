@@ -127,6 +127,7 @@ html, body {
   font-size: 15px;
   font-family: inherit;
   cursor: pointer;
+  text-align: center;
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 .btn:hover { transform: translateY(-1px); }
@@ -2126,7 +2127,7 @@ body.tutorial-active .canvas-pickers.tutorial-elevated {
   justify-content: center;
   margin-top: var(--sp-xl);
 }
-.wizard-nav .btn { min-width: 120px; }
+.wizard-nav .btn { min-width: 120px; text-align: center; justify-content: center; }
 
 @media (max-width: 599px) {
   .wizard-container { padding: var(--sp-lg) var(--sp-md); }
@@ -2209,92 +2210,243 @@ body.tutorial-active .canvas-pickers.tutorial-elevated {
   to { opacity: 1; transform: scale(1); }
 }
 
+/* ===== Mobile Bottom Bar (hidden by default, shown on mobile/tablet) ===== */
+.mobile-bottom-bar {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 900;
+  background: var(--white);
+  box-shadow: 0 -2px 12px rgba(0,0,0,0.08);
+  padding: 8px 12px;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom));
+  gap: 8px;
+}
+.mobile-bottom-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: 'Baloo 2', cursive;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.mobile-bottom-btn:active { transform: scale(0.97); }
+.mobile-bottom-btn--photos {
+  background: var(--cream);
+  color: var(--brown);
+}
+.mobile-bottom-btn--export {
+  background: var(--heart);
+  color: var(--white);
+}
+.mobile-photo-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--heart);
+  color: var(--white);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0 5px;
+}
+
+/* ===== Mobile Panel Backdrop ===== */
+.mobile-panel-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 999;
+}
+.mobile-panel-backdrop.active { display: block; }
+
+/* ===== Landscape Warning Banner ===== */
+.landscape-warning {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #FFF3CD;
+  color: #664D03;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.landscape-warning i { font-size: 18px; flex-shrink: 0; }
+.landscape-warning-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+  color: #664D03;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+
 /* ===== Mobile: phones < 600px ===== */
 @media (max-width: 599px) {
+  /* --- Landing --- */
+  .join-row { flex-direction: column; gap: var(--sp-sm); }
+  .join-row .code-input,
+  .join-row .btn { width: 100%; }
+
+  /* --- Wizard --- */
+  .wizard-nav {
+    flex-direction: column;
+    width: 100%;
+    gap: var(--sp-sm);
+  }
+  .wizard-nav .btn { width: 100%; text-align: center; justify-content: center; }
+
+  /* --- Session layout --- */
   .screen-session {
     max-width: 100%;
     padding: var(--sp-xs) var(--sp-sm);
-    height: 100vh;
-    height: 100dvh;
+    height: 100vh; height: 100dvh;
   }
-
   .topbar { padding: var(--sp-xs) 0; flex-shrink: 0; flex-wrap: wrap; gap: var(--sp-xs); }
-
   .session-columns {
     flex-direction: column;
-    gap: var(--sp-sm);
+    gap: 4px;
     overflow-y: auto;
-    padding-bottom: var(--sp-lg);
+    padding-bottom: 72px;
   }
-
   .session-col-left { flex: none; overflow: visible; justify-content: flex-start; }
   .session-col-right { flex: none; flex-direction: column; overflow: visible; }
   .right-content { flex-direction: column; overflow: visible; }
   .right-main { flex: none; overflow: visible; }
-  .canvas-pickers { padding-right: 0; }
-
-  /* Hide sidebar on mobile — use tap-to-add popup instead */
   .right-sidebar { display: none; }
-
   .share-code-text { display: none; }
-  .prompt-section { padding: var(--sp-xs) var(--sp-sm); }
+
+  /* --- Step labels & badges --- */
+  .step-badge { font-size: 11px; padding: 2px 8px; }
+  .step-label { font-size: 14px; margin-bottom: 0; gap: 6px; }
+
+  /* --- Prompt section --- */
+  .prompt-section { padding: 6px 10px; }
+  .prompt-title { font-size: 15px; margin-bottom: 2px; }
+  .prompt-categories { margin-bottom: 4px; gap: 4px; }
+  .prompt-cat { padding: 4px 0; font-size: 12px; min-height: 30px; }
+  .prompt-swap-zone { min-height: 28px; }
+  .prompt-generate-btn { font-size: 13px; padding: 6px 10px; }
+  .prompt-display { font-size: 14px; }
   .prompt-countdown { font-size: 36px; }
 
-  .camera-section { padding: var(--sp-sm); }
+  /* --- Camera section --- */
+  .camera-section { padding: 6px; }
+  .camera-wrapper { max-height: 200px; margin: 0 auto; }
+  .rmbg-label-main { font-size: 12px; }
+  .rmbg-label-hint { font-size: 10px; }
+  .btn-rmbg-trigger { padding: 5px 8px; }
 
-  .picker-trigger { padding: 8px 14px; font-size: 12px; min-height: 44px; }
-  .layout-opt { width: 40px; height: 40px; min-width: 40px; padding: 4px; }
-  .ratio-opt { padding: 6px 10px; font-size: 10px; min-height: 36px; }
-
-  .fshape-opt { width: 28px; height: 28px; font-size: 14px; min-width: 28px; }
-  .frame-slider { width: 50px; }
-  .frame-bg-options { flex-wrap: nowrap; }
-  .fbg-opt { width: 24px; height: 24px; min-width: 24px; }
-
-  .canvas-preview {
-    border-radius: 0;
-  }
-
-  .deco-tool { width: 44px; padding: 4px 3px 3px; }
-  .deco-tool-icon { font-size: 15px; }
-  .deco-tool-label { font-size: 8px; }
-  .emoji-picker { gap: 2px; }
-  .emoji-opt { font-size: 18px; padding: 2px 3px; }
-
-  .thumb-frame-marker { font-size: 7px; padding: 1px 4px 1px 2px; }
-  .thumb-delete-btn { width: 20px; height: 20px; font-size: 12px; }
-
-  .bank-label { font-size: 12px; }
-
+  /* --- Snap section --- */
   .snap-section {
-    padding: var(--sp-sm) 0 var(--sp-xs) 0;
+    padding: 6px 8px 10px;
     border-top: 1px solid rgba(0,0,0,0.06);
-    margin-top: var(--sp-xs);
+    margin-top: 0;
   }
-  .btn-snap { width: 54px; height: 54px; }
-  .snap-inner { width: 42px; height: 42px; }
-  .camera-stop-btn { width: 44px; height: 44px; font-size: 16px; }
+  .snap-side { position: static; }
+  .snap-label { display: none; }
+  .btn-snap { width: 48px; height: 48px; flex-shrink: 0; }
+  .snap-inner { width: 36px; height: 36px; }
+  .camera-stop-btn { width: 32px; height: 32px; font-size: 14px; }
+  .camera-stop-label { font-size: 10px; }
   .btn-timer-trigger { padding: 4px 8px; }
   .timer-icon { font-size: 14px; }
   .timer-value { font-size: 9px; }
 
-  .vbg-opt { min-width: 30px; min-height: 30px; }
-  .bg-dot { min-width: 30px; min-height: 30px; }
+  /* --- Canvas pickers --- */
+  .canvas-pickers { gap: 4px; padding-top: 6px; padding-bottom: 2px; padding-right: 0; }
+  .picker-trigger { padding: 7px 12px; font-size: 13px; min-height: 36px; }
 
-  /* Deco panel: appear above trigger on mobile */
-  .deco-panel {
-    top: auto;
-    bottom: calc(100% + var(--sp-sm));
-    left: 0;
-    right: 0;
-    animation: panelSlideUp 0.15s ease;
-    min-width: unset;
+  /* --- Canvas: scroll horizontally for landscape ratios, center for portrait --- */
+  .canvas-section {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    justify-content: flex-start;
+    width: 100%;
+    max-width: 100%;
+    flex: 0 0 auto;
   }
-  .prompt-title { font-size: 13px; }
-  .prompt-cat { font-size: 10px; min-height: 36px; padding: 6px 12px; }
-  .prompt-generate-btn { font-size: 12px; padding: 6px 12px; }
-  .step-label { font-size: 11px; }
-  .step-badge { font-size: 9px; padding: 1px 6px; }
+  .canvas-preview {
+    border-radius: 0;
+    max-width: none;
+    flex-shrink: 0;
+    margin: 0 auto; /* centers when narrower than container, no effect when wider */
+  }
+
+  /* --- Shapes & sliders --- */
+  .fshape-opt { width: 30px; height: 30px; font-size: 15px; min-width: 30px; }
+  .frame-slider { width: 60px; }
+  .frame-bg-options { flex-wrap: nowrap; }
+  .fbg-opt { width: 28px; height: 28px; min-width: 28px; }
+  .layout-opt { width: 40px; height: 40px; min-width: 40px; padding: 4px; }
+  .ratio-opt { padding: 6px 10px; font-size: 11px; min-height: 34px; }
+
+  /* --- Decorations --- */
+  .deco-tool { width: 48px; padding: 5px 4px 4px; }
+  .deco-tool-icon { font-size: 16px; }
+  .deco-tool-label { font-size: 9px; }
+  .emoji-picker { gap: 3px; }
+  .emoji-opt { font-size: 20px; padding: 3px 4px; }
+
+  /* --- Thumbnails --- */
+  .thumb-frame-marker { font-size: 8px; padding: 2px 5px 2px 3px; }
+  .thumb-delete-btn { width: 22px; height: 22px; font-size: 13px; }
+  .bank-label { font-size: 13px; }
+
+  /* --- BG removal --- */
+  .vbg-opt { min-width: 32px; min-height: 32px; }
+  .bg-dot { min-width: 32px; min-height: 32px; }
+
+  /* --- Panels: fixed centered overlays (no clipping) --- */
+  .picker-panel,
+  .deco-panel,
+  .custom-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+    width: 90vw;
+    max-width: 340px;
+    z-index: 1000;
+    animation: mobilePickerIn 0.15s ease;
+    min-width: unset;
+    padding: var(--sp-md);
+  }
+  .layout-options,
+  .ratio-options { flex-wrap: wrap; justify-content: center; gap: 6px; }
+  .custom-panel-content {
+    white-space: normal;
+    min-width: unset;
+    padding: var(--sp-md);
+    gap: var(--sp-md);
+  }
+  .settings-group { gap: var(--sp-sm); }
+  .settings-group-label { font-size: 13px; }
+  @keyframes mobilePickerIn {
+    from { opacity: 0; transform: translate(-50%, -48%); }
+    to { opacity: 1; transform: translate(-50%, -50%); }
+  }
+
+  /* --- Mobile bottom bar --- */
+  .mobile-bottom-bar { display: flex; }
 }
 
 /* ===== Responsive: tablets ===== */
@@ -2306,7 +2458,7 @@ body.tutorial-active .canvas-pickers.tutorial-elevated {
   .session-columns {
     flex-direction: column;
     overflow-y: auto;
-    padding-bottom: var(--sp-lg);
+    padding-bottom: 72px;
   }
   .session-col-left { flex: none; overflow: visible; justify-content: flex-start; }
   .session-col-right { flex: none; flex-direction: column; overflow: visible; }
@@ -2314,15 +2466,27 @@ body.tutorial-active .canvas-pickers.tutorial-elevated {
   .right-main { flex: none; overflow: visible; }
   .canvas-pickers { padding-right: 0; }
   .right-sidebar { display: none; }
-  /* Deco panel: appear above trigger on tablet */
-  .deco-panel {
-    top: auto;
-    bottom: calc(100% + var(--sp-sm));
-    left: 0;
-    right: 0;
-    animation: panelSlideUp 0.15s ease;
+  .mobile-bottom-bar { display: flex; }
+  /* All panels: fixed centered overlays on tablet */
+  .picker-panel,
+  .deco-panel,
+  .custom-panel {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+    width: 80vw;
+    max-width: 420px;
+    z-index: 1000;
+    animation: mobilePickerIn 0.15s ease;
     min-width: unset;
+    padding: var(--sp-md);
   }
+  .layout-options,
+  .ratio-options { flex-wrap: wrap; justify-content: center; gap: 6px; }
+  .custom-panel-content { white-space: normal; min-width: unset; padding: var(--sp-lg); gap: var(--sp-md); }
 }
 @media (min-width: 900px) {
   .btn-snap { width: 68px; height: 68px; }

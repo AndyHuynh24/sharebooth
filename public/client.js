@@ -261,6 +261,18 @@ function resizeCanvasImmediate() {
   const MIN_W = 200;
   if (w < MIN_W) { w = MIN_W; h = w / ratio; }
 
+  // On mobile/tablet with landscape ratio, enforce a minimum canvas size
+  // based on viewport dimensions (not parent) to avoid feedback loops.
+  // Height = 35% of screen, width follows from ratio. Session columns scroll horizontally.
+  if (window.innerWidth < 960 && ratio > 1) {
+    const targetH = window.innerHeight * 0.6;
+    const targetW = targetH * ratio;
+    if (targetW > w || targetH > h) {
+      h = targetH;
+      w = targetW;
+    }
+  }
+
   w = Math.round(w);
   h = Math.round(h);
 
@@ -503,6 +515,7 @@ function renderPhotoBank() {
   }
   // Update scroll hint visibility
   requestAnimationFrame(() => updateBankScrollHint());
+  updateMobilePhotoCount();
 }
 
 function updateBankScrollHint() {
@@ -1258,8 +1271,8 @@ async function render(time = 0) {
         // Helper text below "+"
         const fontSize = Math.max(8, Math.min(12, slot.w / (16 * d))) * d;
         ctx.font = `600 ${fontSize}px Inter, sans-serif`;
-        const helpText = window.innerWidth < 600 ? 'Tap to add' : 'Drag to add';
-        ctx.fillText(helpText, slot.x + slot.w / 2, slot.y + slot.h / 2 + plusSize * 0.45);
+        const action = window.innerWidth < 960 ? 'Tap to add' : 'Drag to add';
+        ctx.fillText('Step 2 · ' + action, slot.x + slot.w / 2, slot.y + slot.h / 2 + plusSize * 0.45);
         ctx.textAlign = 'left';
         ctx.textBaseline = 'alphabetic';
         ctx.restore();
@@ -2085,8 +2098,8 @@ decoCanvas.addEventListener('pointerdown', (e) => {
         renderDecorations();
         render();
       } else {
-        // Tap on empty slot opens photo picker popup (mobile only)
-        if (photoBank.length > 0 && window.innerWidth < 600) {
+        // Tap on empty slot opens photo picker popup (mobile + tablet)
+        if (photoBank.length > 0 && window.innerWidth < 960) {
           const emptySlot = hitTestEmptySlot(canvasCoords.px, canvasCoords.py);
           if (emptySlot >= 0) {
             openPhotoPickerSheet(emptySlot);
@@ -3332,6 +3345,12 @@ document.querySelectorAll('.ratio-opt').forEach(btn => {
     const key = btn.dataset.ratio;
     canvasRatioOverride = RATIO_MAP[key] !== undefined ? RATIO_MAP[key] : null;
     resizeCanvasImmediate();
+    // Warn mobile users when switching to landscape ratio
+    if (window.innerWidth < 960 && canvasRatioOverride !== null && canvasRatioOverride > 1) {
+      showLandscapeWarning();
+    } else {
+      hideLandscapeWarning();
+    }
   });
 });
 
@@ -3355,6 +3374,7 @@ function closeAllPickers() {
   const dt = document.getElementById('decoDialToggle');
   if (dd) { dd.style.display = 'none'; }
   if (dt) { dt.classList.remove('active'); }
+  hideMobileBackdrop();
 }
 
 btnLayoutTrigger.addEventListener('click', () => {
@@ -3363,6 +3383,7 @@ btnLayoutTrigger.addEventListener('click', () => {
   if (!isOpen) {
     layoutPanel.style.display = 'flex';
     btnLayoutTrigger.classList.add('active');
+    showMobileBackdrop();
   }
 });
 btnRatioTrigger.addEventListener('click', () => {
@@ -3371,6 +3392,7 @@ btnRatioTrigger.addEventListener('click', () => {
   if (!isOpen) {
     ratioPanel.style.display = 'flex';
     btnRatioTrigger.classList.add('active');
+    showMobileBackdrop();
   }
 });
 document.addEventListener('click', (e) => {
@@ -3395,6 +3417,7 @@ decoDialToggle.addEventListener('click', () => {
   if (!isOpen) {
     decoDial.style.display = 'flex';
     decoDialToggle.classList.add('active');
+    showMobileBackdrop();
   }
 });
 
@@ -3873,6 +3896,7 @@ btnSettings.addEventListener('click', () => {
   closeAllPickers();
   settingsPanel.style.display = isOpen ? 'none' : 'block';
   btnSettings.classList.toggle('active', !isOpen);
+  if (!isOpen) showMobileBackdrop();
 });
 document.addEventListener('click', (e) => {
   if (!customSection.contains(e.target) && settingsPanel.style.display !== 'none') {
@@ -4275,6 +4299,63 @@ let tutorialTriggered = false;
 socket.on('user-joined', () => {
   if (!tutorialTriggered) {
     tutorialTriggered = true;
-    setTimeout(() => startTutorial(), 600);
+    if (window.innerWidth >= 600) setTimeout(() => startTutorial(), 600);
   }
 });
+
+// ===== Mobile Bottom Bar =====
+const mobilePhotosBtn = document.getElementById('mobilePhotosBtn');
+const mobileExportBtn = document.getElementById('mobileExportBtn');
+const mobilePhotoCount = document.getElementById('mobilePhotoCount');
+
+if (mobilePhotosBtn) {
+  mobilePhotosBtn.addEventListener('click', () => {
+    openPhotoPickerSheet(-1);
+  });
+}
+if (mobileExportBtn) {
+  mobileExportBtn.addEventListener('click', () => {
+    exportModal.style.display = 'flex';
+  });
+}
+
+function updateMobilePhotoCount() {
+  if (!mobilePhotoCount) return;
+  const count = photoBank.length + layers.filter(l => l && l.imageUrl).length;
+  mobilePhotoCount.textContent = count;
+}
+
+// ===== Mobile Panel Backdrop =====
+const mobilePanelBackdrop = document.getElementById('mobilePanelBackdrop');
+// ===== Landscape Ratio Warning =====
+function showLandscapeWarning() {
+  let banner = document.getElementById('landscapeWarning');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'landscapeWarning';
+    banner.className = 'landscape-warning';
+    banner.innerHTML = '<i class="bx bx-laptop"></i> Landscape ratios work best on a laptop. You can scroll horizontally to see the full canvas. <button class="landscape-warning-close" onclick="hideLandscapeWarning()">&times;</button>';
+    const canvasPickers = document.querySelector('.canvas-pickers');
+    if (canvasPickers) canvasPickers.parentElement.insertBefore(banner, canvasPickers.nextSibling);
+  }
+  banner.style.display = 'flex';
+}
+function hideLandscapeWarning() {
+  const banner = document.getElementById('landscapeWarning');
+  if (banner) banner.style.display = 'none';
+}
+
+function showMobileBackdrop() {
+  if (mobilePanelBackdrop && window.innerWidth < 960) {
+    mobilePanelBackdrop.classList.add('active');
+  }
+}
+function hideMobileBackdrop() {
+  if (mobilePanelBackdrop) mobilePanelBackdrop.classList.remove('active');
+}
+if (mobilePanelBackdrop) {
+  mobilePanelBackdrop.addEventListener('click', () => {
+    hideMobileBackdrop();
+    closeAllPickers();
+  });
+}
