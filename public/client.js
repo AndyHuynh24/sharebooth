@@ -692,6 +692,7 @@ async function doSnap() {
   }
 
   snapAndEmit(tmpCanvas);
+  showSnapFeedback();
 }
 
 // Convert canvas to data URL and emit directly via socket — no file upload needed
@@ -4299,9 +4300,44 @@ let tutorialTriggered = false;
 socket.on('user-joined', () => {
   if (!tutorialTriggered) {
     tutorialTriggered = true;
-    if (window.innerWidth >= 600) setTimeout(() => startTutorial(), 600);
+    if (window.innerWidth < 960) {
+      showMobileWarning();
+    } else {
+      setTimeout(() => startTutorial(), 600);
+    }
   }
 });
+
+// ===== Snap Visual Feedback =====
+function showSnapFeedback() {
+  // Flash on camera preview
+  const wrapper = document.querySelector('.camera-wrapper');
+  if (wrapper) {
+    const flash = document.createElement('div');
+    flash.className = 'snap-flash';
+    wrapper.appendChild(flash);
+    flash.addEventListener('animationend', () => flash.remove());
+  }
+  // Toast notification
+  const toast = document.createElement('div');
+  toast.className = 'snap-toast';
+  toast.textContent = 'Photo captured!';
+  document.body.appendChild(toast);
+  toast.addEventListener('animationend', () => toast.remove());
+}
+
+// ===== Mobile Device Warning Popup =====
+function showMobileWarning() {
+  const overlay = document.getElementById('mobileWarningOverlay');
+  if (overlay) overlay.style.display = 'flex';
+}
+function dismissMobileWarning() {
+  const overlay = document.getElementById('mobileWarningOverlay');
+  if (overlay) overlay.style.display = 'none';
+}
+document.getElementById('mobileWarningDismiss')?.addEventListener('click', dismissMobileWarning);
+// Show immediately on page load for mobile devices
+if (window.innerWidth < 960) showMobileWarning();
 
 // ===== Mobile Bottom Bar =====
 const mobilePhotosBtn = document.getElementById('mobilePhotosBtn');

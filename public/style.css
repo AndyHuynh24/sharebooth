@@ -2272,6 +2272,108 @@ body.tutorial-active .canvas-pickers.tutorial-elevated {
 }
 .mobile-panel-backdrop.active { display: block; }
 
+/* ===== Snap Flash Feedback ===== */
+.snap-flash {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  opacity: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  animation: snapFlash 0.4s ease-out forwards;
+  z-index: 10;
+}
+@keyframes snapFlash {
+  0% { opacity: 0.85; }
+  100% { opacity: 0; }
+}
+.snap-toast {
+  position: fixed;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--brown);
+  color: var(--white);
+  font-family: 'Baloo 2', cursive;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 18px;
+  border-radius: 20px;
+  z-index: 9999;
+  pointer-events: none;
+  animation: snapToast 1.4s ease forwards;
+  white-space: nowrap;
+}
+@keyframes snapToast {
+  0% { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+}
+
+/* ===== Mobile Device Warning Popup ===== */
+.mobile-warning-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.45);
+  animation: mobileWarnFadeIn 0.25s ease;
+}
+@keyframes mobileWarnFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.mobile-warning-popup {
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 28px 24px 20px;
+  width: 88%;
+  max-width: 320px;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  animation: mobileWarnPopIn 0.25s ease;
+}
+@keyframes mobileWarnPopIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+.mobile-warning-icon {
+  font-size: 40px;
+  color: var(--heart);
+  margin-bottom: 8px;
+}
+.mobile-warning-title {
+  font-family: 'Baloo 2', cursive;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--brown);
+  margin: 0 0 6px;
+}
+.mobile-warning-desc {
+  font-size: 13px;
+  color: var(--brown);
+  opacity: 0.75;
+  line-height: 1.45;
+  margin: 0 0 16px;
+}
+.mobile-warning-btn {
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--heart);
+  color: var(--white);
+  font-family: 'Baloo 2', cursive;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.mobile-warning-btn:active { transform: scale(0.97); }
+
 /* ===== Landscape Warning Banner ===== */
 .landscape-warning {
   display: none;

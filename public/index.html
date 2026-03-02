@@ -552,6 +552,16 @@
 
   </div>
 
+  <!-- Mobile device warning popup (outside screens so it's always accessible) -->
+  <div class="mobile-warning-overlay" id="mobileWarningOverlay" style="display:none">
+    <div class="mobile-warning-popup">
+      <div class="mobile-warning-icon"><i class='bx bx-laptop'></i></div>
+      <h3 class="mobile-warning-title">Best on Laptop</h3>
+      <p class="mobile-warning-desc">For the best experience, use a laptop or a larger screen. Some features may be limited on mobile.</p>
+      <button class="mobile-warning-btn" id="mobileWarningDismiss">Got it</button>
+    </div>
+  </div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script src="prompts.js"></script>
   <script src="client.js"></script>
