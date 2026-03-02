@@ -3169,7 +3169,6 @@ exportModal.addEventListener('click', (e) => {
 
 document.getElementById('exportModalPng').onclick = () => {
   exportModal.style.display = 'none';
-  if (sessionCode) socket.emit('finish', { code: sessionCode });
   exportCanvasPNG();
 };
 
