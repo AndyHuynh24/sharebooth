@@ -4,6 +4,7 @@
 
 ShareBooth lets people from anywhere in the world join a shared session, snap photos from their own devices, and compose them together on a live canvas with layouts, stickers, background removal, and more. No downloads, no editing skills -- just open a browser and create.
 
+Watch it now at: https://www.youtube.com/watch?v=VIKeBT4W1lY
 ---
 
 ## Tech Stack
