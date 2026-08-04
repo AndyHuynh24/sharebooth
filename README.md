@@ -46,7 +46,7 @@ Watch it now at: https://www.youtube.com/watch?v=VIKeBT4W1lY
                  │  └───────────┘  │
                  │                 │
                  │  Socket.IO      │
-                 │  Room Mgmt     │
+                 │  Room Mgmt      │
                  └─────────────────┘
 ```
 
