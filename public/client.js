@@ -1598,6 +1598,7 @@ function toLocalDecoCoords(nx, ny, d) {
 function hitTestDeco(nx, ny) {
   for (let i = decorations.length - 1; i >= 0; i--) {
     const d = decorations[i];
+    if (d.type === 'logo') continue;
     const s = getDecoSize(d);
     const local = toLocalDecoCoords(nx, ny, d);
     if (local.x >= d.x - s.w / 2 && local.x <= d.x + s.w / 2 &&
@@ -2567,6 +2568,8 @@ function resetDecoToolToSelect() {
 
 function deleteSelectedDeco() {
   if (!selectedDecoId) return;
+  const dec = decorations.find(d => d.id === selectedDecoId);
+  if (dec && dec.type === 'logo') return;
   decorations = decorations.filter(d => d.id !== selectedDecoId);
   if (sessionCode) socket.emit('decoration-remove', { code: sessionCode, id: selectedDecoId });
   selectedDecoId = null;
@@ -2785,6 +2788,7 @@ socket.on('decoration-rotate', ({ id, rotation }) => {
   if (d) { d.rotation = rotation; renderDecorations(); }
 });
 socket.on('decoration-remove', ({ id }) => {
+  if (id === 'logo-brand') return;
   decorations = decorations.filter(d => d.id !== id);
   if (selectedDecoId === id) selectedDecoId = null;
   renderDecorations();
@@ -2795,6 +2799,12 @@ socket.on('decoration-update', ({ id, props }) => {
 });
 socket.on('decorations-sync', ({ decorations: sd }) => {
   decorations = sd || [];
+  if (!decorations.find(d => d.type === 'logo')) {
+    decorations.push({
+      id: 'logo-brand', type: 'logo', content: 'logo',
+      x: 0.5, y: 0.028, scale: 0.95, owner: '__system__', rotation: 0
+    });
+  }
   // Preload any image stickers
   decorations.forEach(d => {
     if (d.type === 'image-sticker' && d.content && !stickerImageCache[d.content]) {
