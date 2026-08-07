@@ -150,39 +150,6 @@ Open `http://localhost:4000`. Click **Create Session** in one tab, copy the code
 
 ShareBooth runs on any Node.js host. The server listens on `process.env.PORT` (default `4000`).
 
-### Render
-
-A `render.yaml` is included for one-click deploy on [Render](https://render.com):
-
-```yaml
-services:
-  - type: web
-    runtime: node
-    buildCommand: npm install
-    startCommand: node server.js
-```
-
-### DigitalOcean App Platform
-
-Connect the GitHub repo and DigitalOcean will auto-detect the Node.js app. Set the run command to `node server.js`.
-
-### Any Node.js Host
-
-```bash
-git clone https://github.com/AndyHuynh24/sharebooth.git
-cd sharebooth
-npm install
-node server.js
-```
-
-For production, use a process manager like [PM2](https://pm2.keymetrics.io/):
-
-```bash
-pm2 start server.js --name sharebooth
-```
-
----
-
 ## License
 
 MIT
